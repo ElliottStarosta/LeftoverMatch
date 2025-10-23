@@ -1,0 +1,33 @@
+type User @table {
+  displayName: String!
+  email: String!
+  createdAt: Timestamp!
+  photoUrl: String
+  location: String
+}
+
+type Leftover @table {
+  user: User
+  name: String!
+  creationDate: Date!
+  status: String!
+  expirationDate: Date
+  description: String
+  photoUrl: String
+  isShareable: Boolean
+}
+
+type Recipe @table {
+  name: String!
+  instructions: String!
+  ingredients: [String]
+  photoUrl: String
+  cuisine: String
+}
+
+type SharingInterest @table {
+  interestedUser: User!
+  leftover: Leftover!
+  expressedAt: Timestamp!
+  message: String
+}

@@ -1,40 +1,13 @@
-// Firebase imports - only on client side
-let initializeApp: any, getApps: any, FirebaseApp: any
-let getFirestore: any, Firestore: any
-let getFirebaseAuth: any, Auth: any
-let getFirebaseFunctions: any, Functions: any
-let getFirebaseStorage: any, FirebaseStorage: any
+// Firebase configuration for Next.js
+// This file ensures Firebase only initializes on the client side
 
-// Dynamically import Firebase modules only on client side
-if (typeof window !== 'undefined') {
-  try {
-    const firebaseApp = require('firebase/app')
-    const firebaseFirestore = require('firebase/firestore')
-    const firebaseAuth = require('firebase/auth')
-    const firebaseFunctions = require('firebase/functions')
-    const firebaseStorage = require('firebase/storage')
-    
-    initializeApp = firebaseApp.initializeApp
-    getApps = firebaseApp.getApps
-    FirebaseApp = firebaseApp.FirebaseApp
-    
-    getFirestore = firebaseFirestore.getFirestore
-    Firestore = firebaseFirestore.Firestore
-    
-    getFirebaseAuth = firebaseAuth.getAuth
-    Auth = firebaseAuth.Auth
-    
-    getFirebaseFunctions = firebaseFunctions.getFunctions
-    Functions = firebaseFunctions.Functions
-    
-    getFirebaseStorage = firebaseStorage.getStorage
-    FirebaseStorage = firebaseStorage.FirebaseStorage
-  } catch (error) {
-    console.warn('Firebase modules not available:', error)
-  }
-}
+import { initializeApp, getApps, getApp as getFirebaseApp, FirebaseApp } from 'firebase/app'
+import { getFirestore, Firestore } from 'firebase/firestore'
+import { getAuth as getFirebaseAuth, Auth } from 'firebase/auth'
+import { getFunctions as getFirebaseFunctions, Functions } from 'firebase/functions'
+import { getStorage as getFirebaseStorage, FirebaseStorage } from 'firebase/storage'
 
-// Firebase configuration
+// Firebase configuration from environment variables
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -44,99 +17,120 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 }
 
-// Initialize Firebase app
-let app: any = null
-let db: any = null
-let auth: any = null
-let functions: any = null
-let storage: any = null
+// Validate Firebase configuration
+function validateFirebaseConfig() {
+  const requiredKeys = [
+    'apiKey',
+    'authDomain',
+    'projectId',
+    'storageBucket',
+    'messagingSenderId',
+    'appId'
+  ]
 
-// Initialize Firebase services
-const initializeFirebase = () => {
-  if (typeof window === 'undefined') {
-    return { app: null, db: null, auth: null, functions: null, storage: null }
-  }
-
-  // Check if Firebase modules are available
-  if (!initializeApp || !getFirestore || !getFirebaseAuth) {
-    console.warn('Firebase modules not available')
-    return { app: null, db: null, auth: null, functions: null, storage: null }
-  }
-
-  // Check if Firebase config is properly set
-  if (!firebaseConfig.apiKey || firebaseConfig.apiKey === 'your_api_key_here') {
-    console.warn('Firebase configuration not set. Please check your environment variables.')
-    return { app: null, db: null, auth: null, functions: null, storage: null }
-  }
-
-  try {
-    // Initialize Firebase app
-    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
-    
-    // Initialize services
-    db = getFirestore(app)
-    auth = getFirebaseAuth(app)
-    functions = getFirebaseFunctions ? getFirebaseFunctions(app) : null
-    storage = getFirebaseStorage ? getFirebaseStorage(app) : null
-
-    console.log('Firebase initialized successfully:', { 
-      app: !!app, 
-      db: !!db, 
-      auth: !!auth, 
-      functions: !!functions, 
-      storage: !!storage 
-    })
-
-    return { app, db, auth, functions, storage }
-  } catch (error) {
-    console.error('Firebase initialization failed:', error)
-    return { app: null, db: null, auth: null, functions: null, storage: null }
+  const missing = requiredKeys.filter(key => !firebaseConfig[key as keyof typeof firebaseConfig])
+  
+  if (missing.length > 0) {
+    throw new Error(`Missing Firebase config: ${missing.join(', ')}`)
   }
 }
 
-// Lazy getters for Firebase services
-export const getDb = (): any => {
-  if (!db) {
-    const services = initializeFirebase()
-    db = services.db
+// Initialize Firebase App
+let app: FirebaseApp | undefined
+let auth: Auth | undefined
+let db: Firestore | undefined
+let functions: Functions | undefined
+let storage: FirebaseStorage | undefined
+
+function initializeFirebase(): FirebaseApp {
+  // Only run on client side
+  if (typeof window === 'undefined') {
+    throw new Error('Firebase can only be initialized on the client side')
+  }
+
+  // Validate config
+  validateFirebaseConfig()
+
+  // Check if already initialized
+  if (getApps().length > 0) {
+    return getFirebaseApp()
+  }
+
+  // Initialize new app
+  return initializeApp(firebaseConfig)
+}
+
+// Get Firebase App
+export function getApp(): FirebaseApp {
+  if (!app) {
+    app = initializeFirebase()
+  }
+  return app
+}
+
+// Get Auth instance
+export function getAuth(): Auth {
+  if (typeof window === 'undefined') {
+    throw new Error('Auth can only be accessed on the client side')
+  }
+  
+  if (!auth) {
+    const firebaseApp = getApp()
+    auth = getFirebaseAuth(firebaseApp)
+  }
+  
+  return auth
+}
+
+// Get Firestore instance
+export function getDb(): Firestore {
+  if (typeof window === 'undefined') {
+    throw new Error('Firestore can only be accessed on the client side')
   }
   
   if (!db) {
-    console.error('Firestore database is not available. Please check your Firebase configuration.')
-    throw new Error('Firestore database is not available')
+    const firebaseApp = getApp()
+    db = getFirestore(firebaseApp)
   }
   
   return db
 }
 
-export const getAuth = (): any => {
-  if (!auth) {
-    const services = initializeFirebase()
-    auth = services.auth
+// Get Functions instance
+export function getFunctions(): Functions | null {
+  if (typeof window === 'undefined') {
+    return null
   }
-  return auth
+  
+  try {
+    if (!functions) {
+      const firebaseApp = getApp()
+      functions = getFirebaseFunctions(firebaseApp)
+    }
+    return functions
+  } catch (error) {
+    console.warn('Firebase Functions not available:', error)
+    return null
+  }
 }
 
-export const getFunctions = (): any => {
-  if (!functions) {
-    const services = initializeFirebase()
-    functions = services.functions
+// Get Storage instance
+export function getStorage(): FirebaseStorage | null {
+  if (typeof window === 'undefined') {
+    return null
   }
-  return functions
+  
+  try {
+    if (!storage) {
+      const firebaseApp = getApp()
+      storage = getFirebaseStorage(firebaseApp)
+    }
+    return storage
+  } catch (error) {
+    console.warn('Firebase Storage not available:', error)
+    return null
+  }
 }
 
-export const getStorage = (): any => {
-  if (!storage) {
-    const services = initializeFirebase()
-    storage = services.storage
-  }
-  return storage
-}
-
-export const getApp = (): any => {
-  if (!app) {
-    const services = initializeFirebase()
-    app = services.app
-  }
-  return app
-}
+// Export singleton instances for backward compatibility
+export { app, auth, db, functions, storage }

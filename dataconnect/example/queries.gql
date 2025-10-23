@@ -1,0 +1,47 @@
+mutation CreateLeftover($name: String!, $description: String!, $creationDate: Date!, $expirationDate: Date, $isShareable: Boolean!, $status: String!, $photoUrl: String) @auth(level: USER) {
+  leftover_insert(data: {
+    name: $name,
+    description: $description,
+    creationDate: $creationDate,
+    expirationDate: $expirationDate,
+    isShareable: $isShareable,
+    status: $status,
+    photoUrl: $photoUrl,
+    userId_expr: "auth.uid"
+  })
+}
+
+query GetLeftover($id: UUID!) @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users.") {
+  leftover(id: $id) {
+    id
+    name
+    description
+    creationDate
+    expirationDate
+    isShareable
+    status
+    photoUrl
+  }
+}
+
+query ListLeftovers @auth(level: USER) {
+  leftovers(where: {userId: {eq_expr: "auth.uid"}}) {
+    id
+    name
+    description
+    creationDate
+    expirationDate
+    isShareable
+    status
+    photoUrl
+  }
+}
+
+mutation CreateSharingInterest($leftoverId: UUID!, $message: String) @auth(level: USER) {
+  sharingInterest_insert(data: {
+    leftoverId: $leftoverId,
+    interestedUserId_expr: "auth.uid",
+    expressedAt_expr: "request.time",
+    message: $message
+  })
+}
