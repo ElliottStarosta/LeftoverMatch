@@ -20,6 +20,7 @@ function ensureClientSide() {
 }
 
 // Create a new claim
+// Create a new claim
 export async function createClaim(
   claimerId: string,
   postId: string,
@@ -29,35 +30,51 @@ export async function createClaim(
     const db = ensureClientSide()
     
     // Dynamic import for Firebase Firestore functions
-    const { collection, addDoc, updateDoc, doc, query, where, getDocs } = await import('firebase/firestore')
+    const { collection, addDoc, updateDoc, doc, getDoc } = await import('firebase/firestore')
+    
+    // First, check if post is still available
+    const postRef = doc(db, 'posts', postId)
+    const postSnap = await getDoc(postRef)
+    
+    if (!postSnap.exists()) {
+      throw new Error('Post not found')
+    }
+    
+    const postData = postSnap.data()
+    if (postData.status !== 'available') {
+      throw new Error('This food has already been claimed')
+    }
     
     // Generate a random pickup code
     const pickupCode = Math.random().toString(36).substring(2, 8).toUpperCase()
     
-    // Create claim document
-    const claimData: Omit<Claim, 'id'> = {
+    // FIRST: Update post status to locked (this removes it from everyone's feed immediately)
+    await updateDoc(postRef, {
+      status: 'locked',
+      lockInfo: {
+        claimedBy: claimerId,
+        claimId: 'pending', // Temporary until claim is created
+        lockedAt: new Date(),
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
+      }
+    })
+    
+    // THEN: Create claim document
+    const claimData: any = {
       claimerId,
       posterId,
       postId,
       status: 'pending',
       lockedAt: new Date(),
       expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes to complete claim
-      pickupCode,
-      completedAt: undefined,
-      cancelledAt: undefined
+      pickupCode
     }
 
     const claimRef = await addDoc(collection(db, 'claims'), claimData)
     
-    // Update post status to locked
-    await updateDoc(doc(db, 'posts', postId), {
-      status: 'locked',
-      lockInfo: {
-        claimedBy: claimerId,
-        claimId: claimRef.id,
-        lockedAt: new Date(),
-        expiresAt: new Date(Date.now() + 30 * 60 * 60 * 1000) // 30 minutes
-      }
+    // Update the post with the actual claim ID
+    await updateDoc(postRef, {
+      'lockInfo.claimId': claimRef.id
     })
 
     return claimRef.id
@@ -193,12 +210,12 @@ export async function isPostAvailable(postId: string): Promise<boolean> {
     const db = ensureClientSide()
     
     // Dynamic import for Firebase Firestore functions
-    const { collection, addDoc, updateDoc, doc, query, where, getDocs } = await import('firebase/firestore')
+    const { doc, getDoc } = await import('firebase/firestore')
     
-    const postDoc = await getDocs(query(collection(db, 'posts'), where('id', '==', postId)))
-    if (postDoc.empty) return false
+    const postDoc = await getDoc(doc(db, 'posts', postId))
+    if (!postDoc.exists()) return false
     
-    const post = postDoc.docs[0].data() as Post
+    const post = postDoc.data() as Post
     return post.status === 'available'
   } catch (error) {
     console.error('Error checking post availability:', error)

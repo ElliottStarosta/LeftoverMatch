@@ -1,219 +1,378 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { XMarkIcon, MapPinIcon, ClockIcon, QrCodeIcon } from '@heroicons/react/24/outline'
-import { AlgorithmPost } from '@/lib/algorithm'
-import { cancelClaim } from '@/lib/claims'
-import QRCodeGenerator from './QRCodeGenerator'
-import toast from 'react-hot-toast'
+import { useState, useEffect, useRef } from 'react'
+import { gsap } from 'gsap'
+import { XMarkIcon } from '@heroicons/react/24/outline'
+import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid'
+import { getDb } from '@/lib/firebase-utils'
+import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 interface ClaimModalProps {
-  post: AlgorithmPost
+  post: {
+    id: string
+    title: string
+    description: string
+    photoUrl: string
+    userId: string
+    location: {
+      address: string
+      lat: number
+      lng: number
+    }
+    distance: number
+    compatibilityPercentage: number
+    matchReasons: string[]
+  }
   onClose: () => void
-  claimId?: string
-  pickupCode?: string
+  claimId: string
+  currentUserId: string
 }
 
-export default function ClaimModal({ post, onClose, claimId, pickupCode }: ClaimModalProps) {
-  const [timeLeft, setTimeLeft] = useState(30 * 60) // 30 minutes in seconds
-  const [isCancelling, setIsCancelling] = useState(false)
+export default function ClaimModal({ post, onClose, claimId, currentUserId }: ClaimModalProps) {
+  const [message, setMessage] = useState('')
+  const [sending, setSending] = useState(false)
+  const [posterData, setPosterData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  
+  const router = useRouter()
+  const modalRef = useRef<HTMLDivElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const heartRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
 
-  // Generate QR code text
-  const qrCodeText = claimId && pickupCode ? 
-    `https://leftovermatch.com/claim/${claimId}?code=${pickupCode}` : 
-    ''
-
-  // Countdown timer
+  // Fetch poster data
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer)
-          toast.error('Claim expired - the item returned to the deck')
-          onClose()
-          return 0
+    const fetchPosterData = async () => {
+      try {
+        const db = getDb()
+        if (!db) return
+
+        const { doc, getDoc } = await import('firebase/firestore')
+        const posterDoc = await getDoc(doc(db, 'users', post.userId))
+        
+        if (posterDoc.exists()) {
+          const data = posterDoc.data()
+          setPosterData(data)
         }
-        return prev - 1
-      })
-    }, 1000)
+      } catch (error) {
+        console.error('Error fetching poster data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-    return () => clearInterval(timer)
-  }, [onClose])
+    fetchPosterData()
+  }, [post.userId])
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
+  // Entrance animation
+  useEffect(() => {
+    if (loading) return
+    
+    const tl = gsap.timeline()
 
-  const getProgressPercentage = () => {
-    return ((30 * 60 - timeLeft) / (30 * 60)) * 100
-  }
+    if (modalRef.current) {
+      tl.fromTo(modalRef.current,
+        { opacity: 0 },
+        { opacity: 1, duration: 0.3 }
+      )
+    }
 
-  const handleGetDirections = () => {
-    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(post.location.address)}`
-    window.open(mapsUrl, '_blank')
-  }
+    if (cardRef.current) {
+      tl.fromTo(cardRef.current,
+        { scale: 0.8, opacity: 0, y: 50 },
+        { scale: 1, opacity: 1, y: 0, duration: 0.6, ease: 'back.out(1.7)' },
+        '-=0.2'
+      )
+    }
 
-  const handleMessagePoster = () => {
-    toast.success('Opening chat with poster...')
-    // TODO: Open chat interface
-  }
+    if (heartRef.current) {
+      tl.fromTo(heartRef.current,
+        { scale: 0, rotation: -180 },
+        { 
+          scale: 1, 
+          rotation: 0, 
+          duration: 0.8, 
+          ease: 'elastic.out(1, 0.6)',
+          onComplete: () => {
+            if (heartRef.current) {
+              gsap.to(heartRef.current, {
+                y: -10,
+                duration: 2,
+                repeat: -1,
+                yoyo: true,
+                ease: 'sine.inOut'
+              })
+            }
+          }
+        },
+        '-=0.5'
+      )
+    }
 
-  const handleCancelClaim = async () => {
-    if (!claimId) {
-      toast.error('No claim to cancel')
+    if (contentRef.current) {
+      const children = contentRef.current.children
+      tl.fromTo(Array.from(children),
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power2.out' },
+        '-=0.5'
+      )
+    }
+  }, [loading])
+
+  const handleSendMessage = async () => {
+    if (!message.trim() || !claimId) {
       return
     }
-
-    setIsCancelling(true)
+    
+    setSending(true)
+    
     try {
-      await cancelClaim(claimId)
-      toast.success('Claim cancelled')
-      onClose()
+      const db = getDb()
+      if (!db) throw new Error('Database not available')
+
+      const { collection, addDoc, serverTimestamp } = await import('firebase/firestore')
+
+      const conversationRef = await addDoc(collection(db, 'conversations'), {
+        claimId,
+        postId: post.id,
+        postTitle: post.title,
+        postPhoto: post.photoUrl,
+        postLocation: post.location.address,
+        postDistance: post.distance,
+        participants: [currentUserId, post.userId],
+        claimerId: currentUserId,
+        posterId: post.userId,
+        status: 'pending',
+        claimAccepted: false,
+        addressRevealed: false,
+        createdAt: serverTimestamp(),
+        lastMessageAt: serverTimestamp(),
+        lastMessage: message.substring(0, 100)
+      })
+
+      await addDoc(collection(db, 'messages'), {
+        conversationId: conversationRef.id,
+        senderId: currentUserId,
+        text: message,
+        type: 'user',
+        createdAt: serverTimestamp(),
+        read: false
+      })
+
+      await addDoc(collection(db, 'notifications'), {
+        userId: post.userId,
+        type: 'new_claim',
+        claimId,
+        postId: post.id,
+        postTitle: post.title,
+        claimerName: posterData?.name || 'Someone',
+        conversationId: conversationRef.id,
+        message: `Someone wants your ${post.title}!`,
+        read: false,
+        createdAt: serverTimestamp()
+      })
+
+      const tl = gsap.timeline()
+      
+      if (cardRef.current) {
+        tl.to(cardRef.current, {
+          scale: 0.8,
+          opacity: 0,
+          y: 50,
+          duration: 0.3,
+          ease: 'power2.in'
+        })
+      }
+      
+      if (modalRef.current) {
+        tl.to(modalRef.current, {
+          opacity: 0,
+          duration: 0.2,
+          onComplete: () => {
+            onClose()
+            router.push(`/messages?conversation=${conversationRef.id}`)
+          }
+        }, '-=0.1')
+      }
     } catch (error) {
-      console.error('Error cancelling claim:', error)
-      toast.error('Failed to cancel claim')
-    } finally {
-      setIsCancelling(false)
+      console.error('Error sending message:', error)
+      alert('Failed to send message. Please try again.')
+      setSending(false)
     }
   }
 
-  const handleOnMyWay = () => {
-    toast.success('Message sent to poster: "I\'m on my way!"')
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      handleClose()
+    }
   }
 
+  const handleClose = () => {
+    const tl = gsap.timeline()
+    
+    if (cardRef.current) {
+      tl.to(cardRef.current, {
+        scale: 0.8,
+        opacity: 0,
+        y: 50,
+        duration: 0.3,
+        ease: 'power2.in'
+      })
+    }
+    
+    if (modalRef.current) {
+      tl.to(modalRef.current, {
+        opacity: 0,
+        duration: 0.2,
+        onComplete: () => {
+          onClose()
+        }
+      }, '-=0.1')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-3xl p-8 shadow-2xl">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  const posterName = posterData?.name || 'Anonymous'
+  const posterAvatar = posterData?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(posterName)}&background=f97316&color=fff&size=128`
+
+  const quickMessages = [
+    "Hey! Your food looks amazing. When can I grab it?",
+    "Hi! I'm interested. What time works for you?",
+    "Yo! This looks fire 🔥 Can I pick it up today?"
+  ]
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+    <div
+      ref={modalRef}
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
     >
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+      <div
+        ref={cardRef}
+        className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto relative"
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold text-green-600">🎉 Claim Locked!</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <XMarkIcon className="w-6 h-6" />
-            </button>
-          </div>
-          <p className="text-gray-600">Show this QR code to the poster to confirm pickup</p>
-        </div>
+        <button
+          onClick={handleClose}
+          className="sticky top-4 left-[calc(100%-3.5rem)] z-10 w-10 h-10 bg-white/90 backdrop-blur hover:bg-gray-100 rounded-full flex items-center justify-center transition-all shadow-lg hover:scale-110 active:scale-95"
+        >
+          <XMarkIcon className="w-6 h-6 text-gray-700" />
+        </button>
 
-        {/* QR Code */}
-        <div className="p-6 text-center">
-          {qrCodeText ? (
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
-              <QRCodeGenerator 
-                text={qrCodeText}
-                size={192}
-                className="mx-auto"
-              />
+        <div ref={contentRef} className="p-8 pt-2">
+          {/* Heart Icon */}
+          <div ref={heartRef} className="mb-6">
+            <div className="w-20 h-20 mx-auto bg-gradient-to-br from-rose-500 via-pink-500 to-orange-500 rounded-full flex items-center justify-center shadow-2xl">
+              <HeartSolidIcon className="w-12 h-12 text-white" />
             </div>
-          ) : (
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 h-48 flex items-center justify-center">
-              <div className="text-gray-500">QR Code loading...</div>
-            </div>
-          )}
+          </div>
+
+          {/* Header */}
+          <h2 className="text-3xl font-bold text-center bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent mb-3">
+            It's a Match!
+          </h2>
           
-          {pickupCode && (
-            <div className="bg-orange-500 text-white rounded-lg p-3 mb-4">
-              <p className="font-mono text-lg font-bold">{pickupCode}</p>
-              <p className="text-sm opacity-90">Pickup Code</p>
-            </div>
-          )}
+          <p className="text-center text-gray-700 mb-6">
+            Slide into <span className="font-bold text-orange-600">{posterName}'s</span> DMs to claim this food
+          </p>
 
-          {/* Countdown Timer */}
-          <div className="mb-4">
-            <div className="text-3xl font-bold text-red-600 mb-2">
-              {formatTime(timeLeft)}
+          {/* Food Preview */}
+          <div className="bg-gradient-to-br from-orange-50 to-pink-50 rounded-2xl p-4 mb-6 shadow-lg">
+            <div className="flex gap-4 items-center">
+              <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 shadow-md">
+                <Image
+                  src={post.photoUrl}
+                  alt={post.title}
+                  fill
+                  sizes="64px"
+                  className="object-cover"
+                />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-lg text-gray-900 mb-1">{post.title}</h3>
+                <p className="text-sm text-gray-600">{post.distance.toFixed(1)} miles away</p>
+              </div>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-red-500 h-2 rounded-full transition-all duration-1000"
-                style={{ width: `${getProgressPercentage()}%` }}
+          </div>
+
+          {/* Poster Info */}
+          <div className="flex items-center gap-3 mb-6 p-4 bg-gray-50 rounded-2xl">
+            <div className="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0 shadow-md">
+              <Image
+                src={posterAvatar}
+                alt={posterName}
+                fill
+                sizes="48px"
+                className="object-cover"
               />
             </div>
-            <p className="text-sm text-gray-600 mt-2">
-              Pickup within 30 minutes or the claim will expire
-            </p>
-          </div>
-        </div>
-
-        {/* Location Info */}
-        <div className="px-6 pb-4">
-          <div className="bg-gray-50 rounded-lg p-4 mb-4">
-            <h3 className="font-semibold text-gray-900 mb-2">Pickup Location</h3>
-            <div className="flex items-center text-gray-600 mb-2">
-              <MapPinIcon className="w-5 h-5 mr-2" />
-              <span>{post.location.address}</span>
-            </div>
-            <div className="flex items-center text-gray-600">
-              <ClockIcon className="w-5 h-5 mr-2" />
-              <span>{post.distance.toFixed(1)} miles away</span>
+            <div>
+              <h4 className="font-bold text-gray-900">{posterName}</h4>
+              <p className="text-xs text-gray-600">Will share address after accepting</p>
             </div>
           </div>
 
-          {/* Food Details */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-4">
-            <h3 className="font-semibold text-gray-900 mb-2">{post.title}</h3>
-            <p className="text-gray-600 text-sm">{post.description}</p>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="p-6 border-t border-gray-200 space-y-3">
-          <button
-            onClick={handleGetDirections}
-            className="w-full bg-orange-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-orange-600 transition-colors flex items-center justify-center"
-          >
-            <MapPinIcon className="w-5 h-5 mr-2" />
-            Get Directions
-          </button>
-
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={handleMessagePoster}
-              className="bg-blue-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-600 transition-colors"
-            >
-              Message Poster
-            </button>
-            
-            <button
-              onClick={handleOnMyWay}
-              className="bg-green-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-600 transition-colors"
-            >
-              I'm On My Way
-            </button>
+          {/* Message Input */}
+          <div className="mb-5">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Send a message
+            </label>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder={`Hey ${posterName}! When can I pick this up?`}
+              rows={3}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-900 bg-white transition-all duration-300 resize-none"
+            />
           </div>
 
+          {/* Quick Messages */}
+          <div className="mb-6">
+            <p className="text-xs font-semibold text-gray-600 mb-2">Quick messages:</p>
+            <div className="grid grid-cols-1 gap-2">
+              {quickMessages.map((suggestion, index) => (
+                <button
+                  key={index}
+                  onClick={() => setMessage(suggestion)}
+                  className="text-left bg-white border-2 border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 hover:border-orange-400 hover:bg-orange-50 transition-all duration-200 active:scale-[0.98]"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Send Button */}
           <button
-            onClick={handleCancelClaim}
-            disabled={isCancelling}
-            className="w-full text-gray-500 py-2 px-4 rounded-lg font-medium hover:text-gray-700 transition-colors disabled:opacity-50"
+            onClick={handleSendMessage}
+            disabled={!message.trim() || sending}
+            className="w-full bg-gradient-to-r from-rose-500 via-orange-500 to-pink-500 text-white py-3 rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
-            {isCancelling ? 'Cancelling...' : 'Cancel Claim'}
+            {sending ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Sending...
+              </span>
+            ) : (
+              'Send Message 🚀'
+            )}
           </button>
         </div>
-
-        {/* Legal Notice */}
-        <div className="px-6 pb-6">
-          <p className="text-xs text-gray-500 text-center">
-            Pickup within 30 minutes or the claim will expire and the item will return to the deck.
-          </p>
-        </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   )
 }
