@@ -9,6 +9,7 @@ export interface User {
   completedClaims: number
   expiredClaims: number
   trustScore: number
+  totalRatings?: number
   level: 'Rookie Rescuer' | 'Food Hero' | 'Food Legend'
   maxClaimsAllowed: number
   lastClaimAt?: Date
@@ -115,7 +116,7 @@ export interface Report {
 export interface Notification {
   id: string
   userId: string
-  type: 'claim_created' | 'claim_expired' | 'claim_confirmed' | 'rating_received' | 'message_received'
+  type: 'claim_created' | 'claim_expired' | 'claim_confirmed' | 'rating_received' | 'message_received' | 'level_up'  // ADD 'level_up'
   title: string
   message: string
   data?: any

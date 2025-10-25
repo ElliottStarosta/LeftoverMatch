@@ -51,7 +51,7 @@ interface UserData {
 }
 
 export default function MessagesContent() {
-  const { user, loading: authLoading } = useAuth()
+  const { user: authUser, loading: authLoading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const conversationId = searchParams.get('conversation')
@@ -91,14 +91,14 @@ export default function MessagesContent() {
 
   // Redirect if not authenticated
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !authUser) {
       router.push('/auth')
     }
-  }, [user, authLoading, router])
+  }, [authUser, authLoading, router])
 
   // Load conversations
   useEffect(() => {
-    if (!user) return
+    if (!authUser) return
 
     const loadConversations = async () => {
       try {
@@ -109,7 +109,7 @@ export default function MessagesContent() {
 
         const conversationsQuery = query(
           collection(db, 'conversations'),
-          where('participants', 'array-contains', user.uid),
+          where('participants', 'array-contains', authUser.uid),
           orderBy('lastMessageAt', 'desc')
         )
 
@@ -144,7 +144,7 @@ export default function MessagesContent() {
     }
 
     loadConversations()
-  }, [user, conversationId])
+  }, [authUser, conversationId, selectedConversation])
 
   // Load user data
   const loadUserData = async (userIds: string[]) => {
@@ -213,7 +213,7 @@ export default function MessagesContent() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newMessage.trim() || !selectedConversation || !user) return
+    if (!newMessage.trim() || !selectedConversation || !authUser) return
 
     setSending(true)
 
@@ -226,7 +226,7 @@ export default function MessagesContent() {
       // Add message
       await addDoc(collection(db, 'messages'), {
         conversationId: selectedConversation.id,
-        senderId: user.uid,
+        senderId: authUser.uid,
         text: newMessage.trim(),
         type: 'user',
         createdAt: serverTimestamp(),
@@ -258,7 +258,7 @@ export default function MessagesContent() {
   }
 
   const handleAcceptClaim = async () => {
-    if (!selectedConversation || !user) return
+    if (!selectedConversation || !authUser) return
 
     setAccepting(true)
 
@@ -346,12 +346,14 @@ export default function MessagesContent() {
     )
   }
 
-  if (!user) return null
+  if (!authUser) {
+    return null
+  }
 
-  const otherUserId = selectedConversation?.participants.find(id => id !== user.uid)
+  const otherUserId = selectedConversation?.participants.find(id => id !== authUser.uid)
   const otherUser = otherUserId ? userData[otherUserId] : null
   const isClaimAccepted = selectedConversation?.claimAccepted
-  const isPoster = selectedConversation?.posterId === user.uid
+  const isPoster = selectedConversation?.posterId === authUser.uid
 
   return (
     <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-rose-50">
@@ -384,7 +386,7 @@ export default function MessagesContent() {
               <h2 className="font-bold text-gray-900">Your Matches</h2>
             </div>
             
-            <div ref={listRef} className="flex-1 overflow-y-auto p-2">
+            <div ref={listRef}   className="flex-1 overflow-y-auto overflow-x-hidden p-4 w-full max-w-[420px] mx-auto"            >
               {conversations.length === 0 ? (
                 <div className="text-center py-12 px-4">
                   <HeartIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -393,7 +395,7 @@ export default function MessagesContent() {
                 </div>
               ) : (
                 conversations.map((convo) => {
-                  const other = convo.participants.find(id => id !== user.uid)
+                  const other = convo.participants.find(id => id !== authUser.uid)
                   const otherData = other ? userData[other] : null
                   const isSelected = selectedConversation?.id === convo.id
 
@@ -401,7 +403,7 @@ export default function MessagesContent() {
                     <button
                       key={convo.id}
                       onClick={() => setSelectedConversation(convo)}
-                      className={`w-full p-3 rounded-xl transition-all duration-200 mb-2 ${
+                      className={`w-full p-5 rounded-xl transition-all duration-200 mb-2 ${
                         isSelected
                           ? 'bg-gradient-to-r from-orange-100 to-pink-100 shadow-lg scale-105'
                           : 'hover:bg-gray-50 active:scale-95'
@@ -480,7 +482,7 @@ export default function MessagesContent() {
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-br from-orange-50/30 to-pink-50/30">
                   {messages.map((msg) => {
-                    const isOwn = msg.senderId === user.uid
+                    const isOwn = msg.senderId === authUser.uid
                     const isSystem = msg.type === 'system'
 
                     if (isSystem) {

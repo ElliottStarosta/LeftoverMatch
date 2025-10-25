@@ -92,9 +92,15 @@ export default function FoodCard({ post }: FoodCardProps) {
             </h2>
             
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex items-center gap-1">
-                {getTrustStars(post.posterTrustScore)}
-              </div>
+            <div className="flex items-center gap-1">
+  {getTrustStars(post.posterTrustScore)}
+  <span className="text-sm text-gray-600 ml-1">
+    {post.posterTotalRatings && post.posterTotalRatings > 0 
+      ? `${(post.posterTrustScore * 5).toFixed(1)} (${post.posterTotalRatings} rating${post.posterTotalRatings !== 1 ? 's' : ''})`
+      : 'No ratings yet'
+    }
+  </span>
+</div>
               <span className="text-white font-semibold text-sm drop-shadow">
                 {(post.posterTrustScore * 5).toFixed(1)}
               </span>
@@ -187,33 +193,69 @@ export default function FoodCard({ post }: FoodCardProps) {
                 )}
 
                 {/* Poster Info */}
-                <div className="bg-gray-50 rounded-2xl p-4 mb-6">
-                  <h3 className="font-semibold text-gray-900 mb-3">About the poster</h3>
-                  <div className="flex items-center gap-3 mb-3">
-                    {post.posterAvatar ? (
-                      <Image
-                        src={post.posterAvatar}
-                        alt={post.posterName}
-                        width={48}
-                        height={48}
-                        className="rounded-full"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
-                        <UserIcon className="w-6 h-6 text-gray-600" />
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-semibold text-gray-900">{post.posterName}</p>
-                      <div className="flex items-center gap-1">
-                        {getTrustStars(post.posterTrustScore)}
-                        <span className="text-sm text-gray-600 ml-1">
-                          {(post.posterTrustScore * 5).toFixed(1)} trust score
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+<div className="bg-gray-50 rounded-2xl p-4 mb-6">
+  <h3 className="font-semibold text-gray-900 mb-3">About the poster</h3>
+  <div className="flex items-center gap-3 mb-3">
+    {post.posterAvatar ? (
+      <Image
+        src={post.posterAvatar}
+        alt={post.posterName}
+        width={48}
+        height={48}
+        className="rounded-full"
+      />
+    ) : (
+      <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
+        <UserIcon className="w-6 h-6 text-gray-600" />
+      </div>
+    )}
+    <div>
+      <p className="font-semibold text-gray-900">{post.posterName}</p>
+      <div className="flex items-center gap-1">
+  {getTrustStars(post.posterTrustScore)}
+  <span className="text-sm text-gray-600 ml-1">
+    {post.posterTotalRatings && post.posterTotalRatings > 0 
+      ? `${(post.posterTrustScore * 5).toFixed(1)} trust score (${post.posterTotalRatings} rating${post.posterTotalRatings !== 1 ? 's' : ''})`
+      : 'New poster - no ratings yet'
+    }
+  </span>
+</div>
+    </div>
+  </div>
+  
+  {/* ADD THESE LINES */}
+  <div className="space-y-2 mt-3">
+    {post.posterLevel && (
+      <div className="flex items-center gap-2 bg-gradient-to-r from-orange-100 to-pink-100 px-3 py-2 rounded-xl">
+        <span className="text-lg">🏆</span>
+        <span className="text-sm font-semibold text-gray-800">{post.posterLevel}</span>
+      </div>
+    )}
+    
+    {post.posterCookingLevel && (
+      <div className="flex items-center gap-2 bg-gradient-to-r from-blue-100 to-purple-100 px-3 py-2 rounded-xl">
+        <span className="text-lg">
+          {post.posterCookingLevel === 'beginner' && '🌱'}
+          {post.posterCookingLevel === 'intermediate' && '🔥'}
+          {post.posterCookingLevel === 'advanced' && '⭐'}
+          {post.posterCookingLevel === 'professional' && '👑'}
+        </span>
+        <span className="text-sm font-semibold text-gray-800 capitalize">
+          {post.posterCookingLevel} Chef
+        </span>
+      </div>
+    )}
+    
+    {post.posterTotalRatings !== undefined && post.posterTotalRatings > 0 && (
+      <div className="flex items-center gap-2 bg-gradient-to-r from-green-100 to-emerald-100 px-3 py-2 rounded-xl">
+        <span className="text-lg">📊</span>
+        <span className="text-sm font-semibold text-gray-800">
+          {post.posterTotalRatings} rating{post.posterTotalRatings !== 1 ? 's' : ''}
+        </span>
+      </div>
+    )}
+  </div>
+</div>
 
                 {/* Food Details */}
                 {post.foodMeta && (
@@ -250,6 +292,7 @@ export default function FoodCard({ post }: FoodCardProps) {
     </div>
   )}
 </div>
+
 
                   </div>
                 )}

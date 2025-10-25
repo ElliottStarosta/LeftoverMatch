@@ -208,11 +208,14 @@ export default function AuthPage() {
         { scale: 0, opacity: 0, y: -30 },
         { scale: 1, opacity: 1, y: 0, duration: 0.5, ease: 'elastic.out(1, 0.6)' }
       )
-      .to(errorRef.current, {
-        x: [-4, 4, -4, 4, -2, 2, 0],
-        duration: 0.5,
-        ease: 'power2.inOut'
+      gsap.to(errorRef.current, {
+        keyframes: {
+          x: [-4, 4, -4, 4, -2, 2, 0],
+          ease: 'power2.inOut',
+          duration: 0.5
+        }
       })
+      
     }
   }, [error])
 

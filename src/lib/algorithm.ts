@@ -24,6 +24,9 @@ export interface AlgorithmPost extends Post {
   posterName: string
   posterTrustScore: number
   posterAvatar: string
+  posterLevel?: string  
+  posterCookingLevel?: string 
+  posterTotalRatings?: number 
   matchReasons: string[]
   compatibilityPercentage: number
 }
@@ -267,100 +270,143 @@ function calculateScore(
   posterTrustScore: number
 ): { score: number; matchReasons: string[]; compatibilityPercentage: number } {
   const matchReasons: string[] = []
-  let earnedScore = 0
-  let maxPossibleScore = 100 // total weight
+  let totalScore = 0
 
-  // 1. DISTANCE (25%)
-  const distanceWeight = 25
+  // 1. DISTANCE (25 points max)
   const maxDistance = user.maxDistance || 5
   if (distance > maxDistance) {
     return { score: 0, matchReasons: ['📍 Too far away'], compatibilityPercentage: 0 }
   }
-  const distanceScore = distanceWeight * Math.max(0, 1 - distance / maxDistance)
-  earnedScore += distanceScore
+  const distanceScore = 25 * Math.max(0, 1 - distance / maxDistance)
+  totalScore += distanceScore
   if (distance < 0.5) matchReasons.push(`📍 Super close - only ${distance.toFixed(1)} miles away!`)
   else if (distance < 1) matchReasons.push(`📍 Very close - ${distance.toFixed(1)} miles away`)
   else if (distance < 2) matchReasons.push(`📍 Nearby - ${distance.toFixed(1)} miles away`)
 
-  // 2. DIETARY COMPATIBILITY (20%)
-  const dietaryWeight = 20
+  // 2. DIETARY COMPATIBILITY (20 points max)
   const dietaryCheck = checkDietaryCompatibility(post, user)
   if (!dietaryCheck.compatible) {
     return { score: 0, matchReasons: dietaryCheck.reasons, compatibilityPercentage: 0 }
   }
-  earnedScore += dietaryWeight
-  if (user.dietaryRestrictions?.length) matchReasons.push(`✅ Matches your ${user.dietaryRestrictions.join(', ')} diet`)
+  totalScore += 20
+  if (user.dietaryRestrictions?.length) {
+    matchReasons.push(`✅ Matches your ${user.dietaryRestrictions.join(', ')} diet`)
+  }
 
-  // 3. ALLERGEN SAFETY (20%)
-  const allergenWeight = 20
+  // 3. ALLERGEN SAFETY (20 points max)
   const allergenCheck = checkAllergenSafety(post, user)
   if (!allergenCheck.safe) {
     return { score: 0, matchReasons: allergenCheck.warnings, compatibilityPercentage: 0 }
   }
-  earnedScore += allergenWeight
-  if (user.allergies?.length) matchReasons.push(`✅ Safe from your allergens (${user.allergies.join(', ')})`)
+  totalScore += 20
+  if (user.allergies?.length) {
+    matchReasons.push(`✅ Safe from your allergens (${user.allergies.join(', ')})`)
+  }
 
-  // 4. CUISINE PREFERENCE (15%)
-  const cuisineWeight = 15
+  // 4. CUISINE PREFERENCE (15 points max)
   const postCuisines = detectCuisine(post.title, post.description)
-  let cuisineScore = 0
-  if (postCuisines.length > 0) {
-    if (user.foodPreferences?.length) {
-      const cuisineMatch = postCuisines.some(c => user.foodPreferences!.some(p => p.toLowerCase() === c))
-      cuisineScore = cuisineMatch ? cuisineWeight : cuisineWeight * 0.33 // partial credit if no match
-      if (cuisineMatch) {
-        const matchedCuisine = postCuisines.find(c => user.foodPreferences!.some(p => p.toLowerCase() === c))
-        matchReasons.push(`🍽️ ${matchedCuisine?.charAt(0).toUpperCase()}${matchedCuisine?.slice(1)} - your favorite!`)
-      }
+  if (postCuisines.length > 0 && user.foodPreferences?.length) {
+    const cuisineMatch = postCuisines.some(c => 
+      user.foodPreferences!.some(p => p.toLowerCase() === c)
+    )
+    if (cuisineMatch) {
+      totalScore += 15
+      const matchedCuisine = postCuisines.find(c => 
+        user.foodPreferences!.some(p => p.toLowerCase() === c)
+      )
+      matchReasons.push(`🍽️ ${matchedCuisine?.charAt(0).toUpperCase()}${matchedCuisine?.slice(1)} - your favorite!`)
     } else {
-      cuisineScore = cuisineWeight * 0.5 // partial credit if user has no preferences
+      totalScore += 5 // Partial credit
+    }
+  } else if (postCuisines.length > 0) {
+    totalScore += 7.5 // Half credit if no preferences set
+  }
+
+  // 5. FRESHNESS (10 points max)
+  const createdAt = post.createdAt instanceof Date 
+    ? post.createdAt 
+    : (post.createdAt as any).toDate()
+  const minutesSincePosted = (Date.now() - createdAt.getTime()) / (1000 * 60)
+  
+  let freshnessScore = 0
+  if (minutesSincePosted < 30) {
+    freshnessScore = 10
+    matchReasons.push('🔥 Just posted!')
+  } else if (minutesSincePosted < 120) {
+    freshnessScore = 7
+    matchReasons.push('⏰ Posted recently')
+  } else if (minutesSincePosted < 240) {
+    freshnessScore = 5
+  } else if (minutesSincePosted < 480) {
+    freshnessScore = 3
+  } else {
+    freshnessScore = 1
+  }
+  totalScore += freshnessScore
+
+  // 6. POSTER REPUTATION (10 points max)
+  const posterScore = posterTrustScore * 10 // Scale 0-1 to 0-10
+  totalScore += posterScore
+  if (posterTrustScore > 0.8) {
+    matchReasons.push('⭐ Highly trusted poster')
+  } else if (posterTrustScore > 0.6) {
+    matchReasons.push('👍 Trusted poster')
+  }
+
+  // 7. TIME AVAILABILITY (5 points max)
+  const now = new Date()
+  const pickupStart = post.pickupWindow.start instanceof Date 
+    ? post.pickupWindow.start 
+    : (post.pickupWindow.start as any).toDate()
+  const pickupEnd = post.pickupWindow.end instanceof Date 
+    ? post.pickupWindow.end 
+    : (post.pickupWindow.end as any).toDate()
+  
+  let timeScore = 0
+  if (now >= pickupStart && now <= pickupEnd) {
+    timeScore = 5
+    matchReasons.push('⏰ Available right now!')
+  } else {
+    const hoursUntilStart = (pickupStart.getTime() - now.getTime()) / (1000 * 60 * 60)
+    if (hoursUntilStart > 0 && hoursUntilStart < 1) {
+      timeScore = 4
+      matchReasons.push('⏰ Available in less than an hour')
+    } else if (hoursUntilStart >= 1 && hoursUntilStart < 2) {
+      timeScore = 3
+    } else if (hoursUntilStart >= 2 && hoursUntilStart < 4) {
+      timeScore = 2
+    } else if (now > pickupEnd) {
+      return { score: 0, matchReasons: ['Pickup window expired'], compatibilityPercentage: 0 }
+    } else {
+      timeScore = 1
     }
   }
-  earnedScore += cuisineScore
+  totalScore += timeScore
 
-  // 5. FRESHNESS (10%)
-  const freshnessWeight = 10
-  const freshnessScoreRaw = calculateFreshnessScore(post) // 0–100
-  const freshnessScore = (freshnessScoreRaw / 100) * freshnessWeight
-  earnedScore += freshnessScore
-  const minutesSincePosted = ((Date.now() - (post.createdAt instanceof Date ? post.createdAt.getTime() : (post.createdAt as any).toDate().getTime())) / (1000 * 60))
-  if (minutesSincePosted < 30) matchReasons.push('🔥 Just posted!')
-  else if (minutesSincePosted < 120) matchReasons.push('⏰ Posted recently')
-
-  // 6. POSTER REPUTATION (10%)
-  const posterWeight = 10
-  const posterScoreRaw = calculatePosterScore(posterTrustScore, post) // 0–100
-  const posterScore = (posterScoreRaw / 100) * posterWeight
-  earnedScore += posterScore
-  if (posterTrustScore > 0.8) matchReasons.push('⭐ Highly trusted poster')
-  else if (posterTrustScore > 0.6) matchReasons.push('👍 Trusted poster')
-
-  // 7. TIME AVAILABILITY (10%)
-  const timeWeight = 10
-  const timeComp = calculateTimeCompatibility(post) // score 0–100
-  const timeScore = (timeComp.score / 100) * timeWeight
-  earnedScore += timeScore
-  if (timeComp.score > 80) matchReasons.push(`⏰ ${timeComp.reason}`)
-
-  // 8. QUALITY INDICATORS (10%)
-  const qualityWeight = 10
-  let rawQuality = 0
+  // 8. QUALITY INDICATORS (5 points max)
+  let qualityScore = 0
   if (post.foodMeta?.homemade) {
-    rawQuality += 2
-    if (user.cookingLevel === 'advanced' || user.cookingLevel === 'professional') matchReasons.push('🏠 Homemade food')
+    qualityScore += 2
+    if (user.cookingLevel === 'advanced' || user.cookingLevel === 'professional') {
+      matchReasons.push('🏠 Homemade food')
+    }
   }
-  if (post.foodMeta?.refrigerated) rawQuality += 1
+  if (post.foodMeta?.refrigerated) qualityScore += 1
   if (post.quantity > 1) {
-    rawQuality += 1
-    if (post.quantity >= 3) matchReasons.push(`🍱 ${post.quantity} portions available`)
+    qualityScore += 1
+    if (post.quantity >= 3) {
+      matchReasons.push(`🍱 ${post.quantity} portions available`)
+    }
   }
-  const qualityScore = (rawQuality / 4) * qualityWeight // scale to weight
-  earnedScore += qualityScore
+  if (post.description.length > 50) qualityScore += 1
+  totalScore += qualityScore
 
-  // FINAL SCORE
-  const compatibilityPercentage = Math.round((earnedScore / maxPossibleScore) * 100)
+  // Total possible: 25+20+20+15+10+10+5+5 = 110 points
+  // But we cap at 100 for percentage calculation
+  const compatibilityPercentage = Math.min(100, Math.round(totalScore))
+
   return {
-    score: Math.min(earnedScore, 100),
+    score: totalScore,
     matchReasons: matchReasons.slice(0, 5),
     compatibilityPercentage
   }
@@ -397,7 +443,8 @@ export async function getPersonalizedFeed({
     // Get user data
     const userDoc = await getDoc(doc(db, 'users', userId))
     if (!userDoc.exists()) {
-      throw new Error('User not found')
+      console.warn('⚠️ User profile not found, redirecting to profile setup')
+  return { posts: [], hasMore: false, lastTimestamp: null }
     }
     const user = userDoc.data() as User
     
@@ -514,6 +561,9 @@ export async function getPersonalizedFeed({
           posterName: posterData?.name || 'Anonymous',
           posterTrustScore,
           posterAvatar: posterData?.photoURL || '',
+          posterLevel: posterData?.level || 'Rookie Rescuer', 
+          posterCookingLevel: posterData?.cookingLevel, 
+          posterTotalRatings: posterData?.totalRatings || 0, 
           matchReasons,
           compatibilityPercentage
         })
