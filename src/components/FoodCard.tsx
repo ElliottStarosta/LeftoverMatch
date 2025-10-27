@@ -20,8 +20,8 @@ export default function FoodCard({ post }: FoodCardProps) {
     const fullStars = Math.floor(score * 5)
     for (let i = 0; i < 5; i++) {
       stars.push(
-        <StarIcon 
-          key={i} 
+        <StarIcon
+          key={i}
           className={`w-3 h-3 ${i < fullStars ? 'text-yellow-400' : 'text-gray-300'}`}
         />
       )
@@ -33,7 +33,7 @@ export default function FoodCard({ post }: FoodCardProps) {
     const dateObj = date instanceof Date ? date : date.toDate()
     const now = new Date()
     const diffInMinutes = Math.floor((now.getTime() - dateObj.getTime()) / (1000 * 60))
-    
+
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
     return `${Math.floor(diffInMinutes / 1440)}d ago`
@@ -41,7 +41,7 @@ export default function FoodCard({ post }: FoodCardProps) {
 
   return (
     <>
-      <div 
+      <div
         onClick={() => setShowDetails(true)}
         className="bg-white rounded-3xl shadow-2xl overflow-hidden h-full flex flex-col relative cursor-pointer hover:scale-[1.02] transition-transform duration-200"
       >
@@ -51,24 +51,23 @@ export default function FoodCard({ post }: FoodCardProps) {
             src={post.photoUrl}
             alt={post.title}
             fill
-            className={`object-cover transition-opacity duration-300 ${
-              imageLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
+            className={`object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
             onLoad={() => setImageLoaded(true)}
           />
-          
+
           {/* Dark gradient overlay at bottom */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-          
+
           {/* Top right badges */}
-          <div className="absolute top-4 right-4 flex flex-col gap-2">
+          <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
             {post.foodMeta?.homemade && (
-              <div className="bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-semibold shadow-lg">
+              <div className="bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-semibold shadow-lg text-gray-900">
                 🏠 Homemade
               </div>
             )}
             {post.quantity > 1 && (
-              <div className="bg-orange-500 text-white px-3 py-1.5 rounded-full text-sm font-semibold shadow-lg">
+              <div className="w-fit bg-orange-500 text-white px-3 py-1.5 rounded-full text-sm font-semibold shadow-lg">
                 {post.quantity} available
               </div>
             )}
@@ -90,20 +89,18 @@ export default function FoodCard({ post }: FoodCardProps) {
             <h2 className="text-3xl font-bold text-white mb-2 drop-shadow-lg">
               {post.title}
             </h2>
-            
+
             <div className="flex items-center gap-2 mb-3">
-            <div className="flex items-center gap-1">
-  {getTrustStars(post.posterTrustScore)}
-  <span className="text-sm text-gray-600 ml-1">
-    {post.posterTotalRatings && post.posterTotalRatings > 0 
-      ? `${(post.posterTrustScore * 5).toFixed(1)} (${post.posterTotalRatings} rating${post.posterTotalRatings !== 1 ? 's' : ''})`
-      : 'No ratings yet'
-    }
-  </span>
-</div>
-              <span className="text-white font-semibold text-sm drop-shadow">
-                {(post.posterTrustScore * 5).toFixed(1)}
-              </span>
+              <div className="flex items-center gap-1">
+                {getTrustStars(post.posterTrustScore)}
+                <span className="text-sm text-gray-200 ml-1">
+                  {post.posterTotalRatings && post.posterTotalRatings > 0
+                    ? `${(post.posterTrustScore * 5).toFixed(1)} (${post.posterTotalRatings} rating${post.posterTotalRatings !== 1 ? 's' : ''})`
+                    : 'No ratings yet'
+                  }
+                </span>
+              </div>
+              
             </div>
 
             <div className="flex items-center justify-between text-white">
@@ -169,7 +166,7 @@ export default function FoodCard({ post }: FoodCardProps) {
               {/* Content */}
               <div className="p-6">
                 <h2 className="text-3xl font-bold text-gray-900 mb-2">{post.title}</h2>
-                
+
                 {/* Match percentage */}
                 <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-full inline-block mb-4">
                   <span className="font-bold">{post.compatibilityPercentage}% Match</span>
@@ -193,105 +190,105 @@ export default function FoodCard({ post }: FoodCardProps) {
                 )}
 
                 {/* Poster Info */}
-<div className="bg-gray-50 rounded-2xl p-4 mb-6">
-  <h3 className="font-semibold text-gray-900 mb-3">About the poster</h3>
-  <div className="flex items-center gap-3 mb-3">
-    {post.posterAvatar ? (
-      <Image
-        src={post.posterAvatar}
-        alt={post.posterName}
-        width={48}
-        height={48}
-        className="rounded-full"
-      />
-    ) : (
-      <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
-        <UserIcon className="w-6 h-6 text-gray-600" />
-      </div>
-    )}
-    <div>
-      <p className="font-semibold text-gray-900">{post.posterName}</p>
-      <div className="flex items-center gap-1">
-  {getTrustStars(post.posterTrustScore)}
-  <span className="text-sm text-gray-600 ml-1">
-    {post.posterTotalRatings && post.posterTotalRatings > 0 
-      ? `${(post.posterTrustScore * 5).toFixed(1)} trust score (${post.posterTotalRatings} rating${post.posterTotalRatings !== 1 ? 's' : ''})`
-      : 'New poster - no ratings yet'
-    }
-  </span>
-</div>
-    </div>
-  </div>
-  
-  {/* ADD THESE LINES */}
-  <div className="space-y-2 mt-3">
-    {post.posterLevel && (
-      <div className="flex items-center gap-2 bg-gradient-to-r from-orange-100 to-pink-100 px-3 py-2 rounded-xl">
-        <span className="text-lg">🏆</span>
-        <span className="text-sm font-semibold text-gray-800">{post.posterLevel}</span>
-      </div>
-    )}
-    
-    {post.posterCookingLevel && (
-      <div className="flex items-center gap-2 bg-gradient-to-r from-blue-100 to-purple-100 px-3 py-2 rounded-xl">
-        <span className="text-lg">
-          {post.posterCookingLevel === 'beginner' && '🌱'}
-          {post.posterCookingLevel === 'intermediate' && '🔥'}
-          {post.posterCookingLevel === 'advanced' && '⭐'}
-          {post.posterCookingLevel === 'professional' && '👑'}
-        </span>
-        <span className="text-sm font-semibold text-gray-800 capitalize">
-          {post.posterCookingLevel} Chef
-        </span>
-      </div>
-    )}
-    
-    {post.posterTotalRatings !== undefined && post.posterTotalRatings > 0 && (
-      <div className="flex items-center gap-2 bg-gradient-to-r from-green-100 to-emerald-100 px-3 py-2 rounded-xl">
-        <span className="text-lg">📊</span>
-        <span className="text-sm font-semibold text-gray-800">
-          {post.posterTotalRatings} rating{post.posterTotalRatings !== 1 ? 's' : ''}
-        </span>
-      </div>
-    )}
-  </div>
-</div>
+                <div className="bg-gray-50 rounded-2xl p-4 mb-6">
+                  <h3 className="font-semibold text-gray-900 mb-3">About the poster</h3>
+                  <div className="flex items-center gap-3 mb-3">
+                    {post.posterAvatar ? (
+                      <Image
+                        src={post.posterAvatar}
+                        alt={post.posterName}
+                        width={48}
+                        height={48}
+                        className="rounded-full"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
+                        <UserIcon className="w-6 h-6 text-gray-600" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-semibold text-gray-900">{post.posterName}</p>
+                      <div className="flex items-center gap-1">
+                        {getTrustStars(post.posterTrustScore)}
+                        <span className="text-sm text-gray-600 ml-1">
+                          {post.posterTotalRatings && post.posterTotalRatings > 0
+                            ? `${(post.posterTrustScore * 5).toFixed(1)} trust score (${post.posterTotalRatings} rating${post.posterTotalRatings !== 1 ? 's' : ''})`
+                            : 'New poster - no ratings yet'
+                          }
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ADD THESE LINES */}
+                  <div className="space-y-2 mt-3">
+                    {post.posterLevel && (
+                      <div className="flex items-center gap-2 bg-gradient-to-r from-orange-100 to-pink-100 px-3 py-2 rounded-xl">
+                        <span className="text-lg">🏆</span>
+                        <span className="text-sm font-semibold text-gray-800">{post.posterLevel}</span>
+                      </div>
+                    )}
+
+                    {post.posterCookingLevel && (
+                      <div className="flex items-center gap-2 bg-gradient-to-r from-blue-100 to-purple-100 px-3 py-2 rounded-xl">
+                        <span className="text-lg">
+                          {post.posterCookingLevel === 'beginner' && '🌱'}
+                          {post.posterCookingLevel === 'intermediate' && '🔥'}
+                          {post.posterCookingLevel === 'advanced' && '⭐'}
+                          {post.posterCookingLevel === 'professional' && '👑'}
+                        </span>
+                        <span className="text-sm font-semibold text-gray-800 capitalize">
+                          {post.posterCookingLevel} Chef
+                        </span>
+                      </div>
+                    )}
+
+                    {post.posterTotalRatings !== undefined && post.posterTotalRatings > 0 && (
+                      <div className="flex items-center gap-2 bg-gradient-to-r from-green-100 to-emerald-100 px-3 py-2 rounded-xl">
+                        <span className="text-lg">📊</span>
+                        <span className="text-sm font-semibold text-gray-800">
+                          {post.posterTotalRatings} rating{post.posterTotalRatings !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* Food Details */}
                 {post.foodMeta && (
                   <div className="bg-orange-50 rounded-2xl p-4">
                     <h3 className="font-semibold text-gray-900 mb-3">Food details</h3>
                     <div className="space-y-2 text-sm">
-  <div className="flex items-center gap-2">
-    {post.foodMeta.homemade ? (
-      <>
-        <span>🏠</span>
-        <span className="text-gray-700">Homemade</span>
-      </>
-    ) : (
-      <>
-        <span>🛍️</span>
-        <span className="text-gray-700">Bought</span>
-      </>
-    )}
-  </div>
+                      <div className="flex items-center gap-2">
+                        {post.foodMeta.homemade ? (
+                          <>
+                            <span>🏠</span>
+                            <span className="text-gray-700">Homemade</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>🛍️</span>
+                            <span className="text-gray-700">Bought</span>
+                          </>
+                        )}
+                      </div>
 
-  {post.foodMeta.refrigerated && (
-    <div className="flex items-center gap-2">
-      <span>❄️</span>
-      <span className="text-gray-700">Refrigerated</span>
-    </div>
-  )}
+                      {post.foodMeta.refrigerated && (
+                        <div className="flex items-center gap-2">
+                          <span>❄️</span>
+                          <span className="text-gray-700">Refrigerated</span>
+                        </div>
+                      )}
 
-  {post.foodMeta.allergens && post.foodMeta.allergens.length > 0 && (
-    <div className="flex items-start gap-2">
-      <span>⚠️</span>
-      <span className="text-gray-700">
-        Contains: {post.foodMeta.allergens.join(', ')}
-      </span>
-    </div>
-  )}
-</div>
+                      {post.foodMeta.allergens && post.foodMeta.allergens.length > 0 && (
+                        <div className="flex items-start gap-2">
+                          <span>⚠️</span>
+                          <span className="text-gray-700">
+                            Contains: {post.foodMeta.allergens.join(', ')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
 
 
                   </div>

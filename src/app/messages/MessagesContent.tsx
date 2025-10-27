@@ -6,12 +6,14 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { getDb } from '@/lib/firebase-utils'
 import { gsap } from 'gsap'
 import Image from 'next/image'
-import { 
-  PaperAirplaneIcon, 
-  ArrowLeftIcon, 
+import RatingModal from '@/components/RatingModal'
+import {
+  PaperAirplaneIcon,
+  ArrowLeftIcon,
   CheckCircleIcon,
   MapPinIcon,
-  UserIcon
+  UserIcon,
+  CheckIcon
 } from '@heroicons/react/24/outline'
 import { HeartIcon } from '@heroicons/react/24/solid'
 
@@ -50,6 +52,12 @@ interface UserData {
   trustScore?: number
 }
 
+interface TypingStatus {
+  [conversationId: string]: {
+    [userId: string]: boolean
+  }
+}
+
 export default function MessagesContent() {
   const { user: authUser, loading: authLoading } = useAuth()
   const router = useRouter()
@@ -64,6 +72,9 @@ export default function MessagesContent() {
   const [loading, setLoading] = useState(true)
   const [userData, setUserData] = useState<Record<string, UserData>>({})
   const [accepting, setAccepting] = useState(false)
+  const [typingStatus, setTypingStatus] = useState<TypingStatus>({})
+  const [showRatingModal, setShowRatingModal] = useState(false)
+
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -155,7 +166,7 @@ export default function MessagesContent() {
       const { doc, getDoc } = await import('firebase/firestore')
 
       const usersData: Record<string, UserData> = {}
-      
+
       for (const userId of userIds) {
         if (userData[userId]) continue // Skip if already loaded
 
@@ -211,6 +222,126 @@ export default function MessagesContent() {
     loadMessages()
   }, [selectedConversation])
 
+  // Local typing state - NO FIREBASE
+  const [localTypingStatus, setLocalTypingStatus] = useState<Record<string, number>>({})
+  const lastTypingUpdateRef = useRef<number>(0)
+  const isCurrentlyTypingRef = useRef<boolean>(false)
+  const typingTimeoutRef = useRef<NodeJS.Timeout>()
+
+  // Listen for typing indicators (read-only, efficient)
+  useEffect(() => {
+    if (!selectedConversation || !authUser) return
+
+    const db = getDb()
+    if (!db) return
+
+    import('firebase/firestore').then(({ doc, onSnapshot }) => {
+      const typingRef = doc(db, 'typing', selectedConversation.id)
+
+      const unsubscribe = onSnapshot(typingRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data() as Record<string, number>
+          setTypingStatus(prev => ({
+            ...prev,
+            [selectedConversation.id]: data
+          }))
+        }
+      })
+
+      return () => unsubscribe()
+    })
+  }, [selectedConversation, authUser])
+
+  // Handle typing indicator - DEBOUNCED with local state
+  const handleTyping = () => {
+    if (!selectedConversation || !authUser) return
+
+    const now = Date.now()
+    setLocalTypingStatus(prev => ({
+      ...prev,
+      [authUser.uid]: now
+    }))
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+    }
+
+    // Set timeout to stop typing after 2 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      const db = getDb()
+      if (!db) return
+
+      isCurrentlyTypingRef.current = false
+
+      import('firebase/firestore').then(({ doc, deleteField, updateDoc }) => {
+        updateDoc(doc(db, 'typing', selectedConversation.id), {
+          [authUser.uid]: deleteField()
+        }).catch(() => { })
+      })
+    }, 2000)
+
+    // Only update Firebase every 2 seconds MAX
+    if (now - lastTypingUpdateRef.current < 2000) {
+      return
+    }
+
+    // Check if state actually changed (are we already marked as typing?)
+    if (isCurrentlyTypingRef.current) {
+      // We're already typing in Firebase, just refresh the timestamp
+      lastTypingUpdateRef.current = now
+
+      const db = getDb()
+      if (!db) return
+
+      import('firebase/firestore').then(({ doc, setDoc }) => {
+        setDoc(doc(db, 'typing', selectedConversation.id), {
+          [authUser.uid]: now
+        }, { merge: true }).catch(() => { })
+      })
+      return
+    }
+
+    lastTypingUpdateRef.current = now
+    isCurrentlyTypingRef.current = true
+
+    // Update Firebase (only once every 2 seconds AND only if state changed)
+    const db = getDb()
+    if (!db) return
+
+    import('firebase/firestore').then(({ doc, setDoc }) => {
+      setDoc(doc(db, 'typing', selectedConversation.id), {
+        [authUser.uid]: now
+      }, { merge: true }).catch(() => {
+        // Silently fail - not critical
+      })
+    })
+  }
+
+  // Cleanup typing status when unmounting or switching conversations
+  useEffect(() => {
+    return () => {
+      if (!selectedConversation || !authUser) return
+
+      // Clear timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+
+      const db = getDb()
+      if (!db) return
+
+      // Mark as not typing when unmounting
+      isCurrentlyTypingRef.current = false
+
+      import('firebase/firestore').then(({ doc, deleteField, updateDoc }) => {
+        updateDoc(doc(db, 'typing', selectedConversation.id), {
+          [authUser.uid]: deleteField()
+        }).catch(() => { })
+      })
+    }
+  }, [selectedConversation, authUser])
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newMessage.trim() || !selectedConversation || !authUser) return
@@ -221,7 +352,13 @@ export default function MessagesContent() {
       const db = getDb()
       if (!db) throw new Error('Database not available')
 
-      const { collection, addDoc, doc, updateDoc, serverTimestamp } = await import('firebase/firestore')
+      const { collection, addDoc, doc, updateDoc, deleteField, serverTimestamp } = await import('firebase/firestore')
+
+      // Clear typing status when sending message
+      isCurrentlyTypingRef.current = false
+      updateDoc(doc(db, 'typing', selectedConversation.id), {
+        [authUser.uid]: deleteField()
+      }).catch(() => { })
 
       // Add message
       await addDoc(collection(db, 'messages'), {
@@ -329,6 +466,16 @@ export default function MessagesContent() {
     }
   }
 
+  const handleCompletePickup = () => {
+    setShowRatingModal(true)
+  }
+
+  const handleRatingComplete = () => {
+    setShowRatingModal(false)
+    // Redirect to home
+    router.push('/')
+  }
+
   const handleGetDirections = () => {
     if (!selectedConversation?.postLocation) return
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(selectedConversation.postLocation)}`
@@ -354,6 +501,11 @@ export default function MessagesContent() {
   const otherUser = otherUserId ? userData[otherUserId] : null
   const isClaimAccepted = selectedConversation?.claimAccepted
   const isPoster = selectedConversation?.posterId === authUser.uid
+
+  // Check if other user is typing (within last 2 seconds)
+  const isOtherUserTyping = selectedConversation && otherUserId &&
+    typingStatus[selectedConversation.id]?.[otherUserId] &&
+    (Date.now() - typingStatus[selectedConversation.id][otherUserId]) < 2000
 
   return (
     <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-rose-50">
@@ -385,8 +537,8 @@ export default function MessagesContent() {
             <div className="p-4 border-b border-gray-200">
               <h2 className="font-bold text-gray-900">Your Matches</h2>
             </div>
-            
-            <div ref={listRef}   className="flex-1 overflow-y-auto overflow-x-hidden p-4 w-full max-w-[420px] mx-auto"            >
+
+            <div ref={listRef} className="flex-1 overflow-y-auto overflow-x-hidden p-4 w-full max-w-[420px] mx-auto">
               {conversations.length === 0 ? (
                 <div className="text-center py-12 px-4">
                   <HeartIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -403,11 +555,10 @@ export default function MessagesContent() {
                     <button
                       key={convo.id}
                       onClick={() => setSelectedConversation(convo)}
-                      className={`w-full p-5 rounded-xl transition-all duration-200 mb-2 ${
-                        isSelected
+                      className={`w-full p-5 rounded-xl transition-all duration-200 mb-2 ${isSelected
                           ? 'bg-gradient-to-r from-orange-100 to-pink-100 shadow-lg scale-105'
                           : 'hover:bg-gray-50 active:scale-95'
-                      }`}
+                        }`}
                     >
                       <div className="flex gap-3 items-center">
                         <div className="relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
@@ -498,11 +649,10 @@ export default function MessagesContent() {
                     return (
                       <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                         <div
-                          className={`max-w-[75%] px-4 py-2.5 rounded-2xl ${
-                            isOwn
+                          className={`max-w-[75%] px-4 py-2.5 rounded-2xl ${isOwn
                               ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white'
                               : 'bg-white text-gray-800 shadow-sm'
-                          }`}
+                            }`}
                         >
                           <p className="text-sm">{msg.text}</p>
                           <p className={`text-xs mt-1 ${isOwn ? 'text-white/70' : 'text-gray-500'}`}>
@@ -512,6 +662,20 @@ export default function MessagesContent() {
                       </div>
                     )
                   })}
+
+                  {/* Typing Indicator */}
+                  {isOtherUserTyping && (
+                    <div className="flex justify-start">
+                      <div className="bg-white px-4 py-3 rounded-2xl shadow-sm">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div ref={messagesEndRef} />
                 </div>
 
@@ -541,15 +705,22 @@ export default function MessagesContent() {
                   </div>
                 )}
 
-                {/* Get Directions Button (for claimer after accepted) */}
+                {/* Get Directions & Complete Pickup (for claimer after accepted) */}
                 {!isPoster && isClaimAccepted && selectedConversation.postLocation && (
-                  <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border-t border-blue-200">
+                  <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border-t border-blue-200 space-y-3">
                     <button
                       onClick={handleGetDirections}
                       className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 px-4 rounded-2xl font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
                     >
                       <MapPinIcon className="w-5 h-5" />
                       Get Directions
+                    </button>
+                    <button
+                      onClick={handleCompletePickup}
+                      className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 px-4 rounded-2xl font-semibold hover:from-green-600 hover:to-emerald-600 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      <CheckIcon className="w-5 h-5" />
+                      Complete Pickup & Rate
                     </button>
                   </div>
                 )}
@@ -560,9 +731,12 @@ export default function MessagesContent() {
                     <input
                       type="text"
                       value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
+                      onChange={(e) => {
+                        setNewMessage(e.target.value)
+                        handleTyping()
+                      }}
                       placeholder={`Message ${otherUser?.name || 'them'}...`}
-                      className="message-input flex-1 px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-orange-500 focus:outline-none transition-all"
+                      className="message-input flex-1 px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-orange-500 focus:outline-none transition-all text-gray-900 placeholder-gray-400"
                       disabled={sending}
                     />
                     <button
@@ -587,6 +761,21 @@ export default function MessagesContent() {
           </div>
         </div>
       </div>
+      {/* Rating Modal */}
+  {showRatingModal && selectedConversation && otherUser && (
+    <RatingModal
+      conversationId={selectedConversation.id}
+      postId={selectedConversation.postId}
+      postTitle={selectedConversation.postTitle}
+      posterId={selectedConversation.posterId}
+      posterName={otherUser.name}
+      posterAvatar={otherUser.photoURL}
+      claimId={selectedConversation.claimId}
+      onClose={handleRatingComplete}
+      currentUserId={authUser.uid}
+    />
+  )}
+  
     </div>
   )
 }

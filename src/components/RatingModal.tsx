@@ -21,6 +21,42 @@ interface RatingModalProps {
   currentUserId: string
 }
 
+
+async function deleteConversationMessages(conversationId: string) {
+  try {
+    const db = getDb()
+    if (!db) throw new Error('Database not available')
+
+    const { collection, query, where, getDocs, deleteDoc, doc } = await import('firebase/firestore')
+
+    const messagesQuery = query(
+      collection(db, 'messages'),
+      where('conversationId', '==', conversationId)
+    )
+
+    const messagesSnapshot = await getDocs(messagesQuery)
+
+    const deletePromises = messagesSnapshot.docs.map(messageDoc =>
+      deleteDoc(doc(db, 'messages', messageDoc.id))
+    )
+
+    await Promise.all(deletePromises)
+    console.log(`✓ Deleted ${messagesSnapshot.size} messages`)
+
+    // Also delete the typing document
+    try {
+      await deleteDoc(doc(db, 'typing', conversationId))
+      console.log('✓ Deleted typing document')
+    } catch (error) {
+      console.log('No typing document to delete (this is fine)')
+    }
+  } catch (error) {
+    console.error('Error deleting messages:', error)
+    throw error
+  }
+}
+
+
 export default function RatingModal({
   conversationId,
   postId,
@@ -86,15 +122,18 @@ export default function RatingModal({
       alert('Please select a rating')
       return
     }
-
+  
     setSubmitting(true)
-
+  
     try {
       const db = getDb()
       if (!db) throw new Error('Database not available')
-
+  
       const { collection, addDoc, doc, getDoc, updateDoc, deleteDoc, serverTimestamp, increment } = await import('firebase/firestore')
-
+  
+      console.log('Step 1: Creating rating...')
+      console.log('Data:', { postId, posterId, claimerId: currentUserId, claimId, stars: rating })
+      
       // Create rating
       await addDoc(collection(db, 'ratings'), {
         postId,
@@ -105,24 +144,22 @@ export default function RatingModal({
         comment: comment.trim() || null,
         createdAt: serverTimestamp()
       })
-
+      console.log('✓ Rating created')
+  
+      console.log('Step 2: Fetching poster doc...')
       // Update poster's trust score
       const posterDoc = await getDoc(doc(db, 'users', posterId))
+      console.log('✓ Poster doc fetched')
+      
       if (posterDoc.exists()) {
+        console.log('Step 3: Updating poster...')
         const posterData = posterDoc.data()
         const currentTrustScore = posterData.trustScore || 0.5
         const totalRatings = posterData.totalRatings || 0
         const successfulPosts = posterData.successfulPosts || 0
-
-        
-        // Calculate new trust score (average of all ratings, normalized to 0-1)
+  
         const newTrustScore = ((currentTrustScore * totalRatings) + (rating / 5)) / (totalRatings + 1)
-
-        const newLevel = calculateLevel(
-            totalRatings + 1,
-            newTrustScore,
-            successfulPosts + 1
-          )        
+        const newLevel = calculateLevel(totalRatings + 1, newTrustScore, successfulPosts + 1)
         
         await updateDoc(doc(db, 'users', posterId), {
           trustScore: newTrustScore,
@@ -130,26 +167,30 @@ export default function RatingModal({
           successfulPosts: increment(1),
           level: newLevel
         })
-
+        console.log('✓ Poster updated')
+  
         if (newLevel !== posterData.level) {
-            await addDoc(collection(db, 'notifications'), {
-              userId: posterId,
-              type: 'level_up',
-              message: `🎉 Congratulations! You've reached ${newLevel}!`,
-              read: false,
-              createdAt: serverTimestamp()
-            })
-          }
-
-
+          console.log('Step 4: Creating level up notification...')
+          await addDoc(collection(db, 'notifications'), {
+            userId: posterId,
+            type: 'level_up',
+            message: `🎉 Congratulations! You've reached ${newLevel}!`,
+            read: false,
+            createdAt: serverTimestamp()
+          })
+          console.log('✓ Level up notification created')
+        }
       }
-
+  
+      console.log('Step 5: Updating claimer...')
       // Update claimer's completed claims
       await updateDoc(doc(db, 'users', currentUserId), {
         completedClaims: increment(1),
         totalClaims: increment(1)
       })
-
+      console.log('✓ Claimer updated')
+  
+      console.log('Step 6: Creating rating notification...')
       // Send notification to poster
       await addDoc(collection(db, 'notifications'), {
         userId: posterId,
@@ -160,16 +201,30 @@ export default function RatingModal({
         read: false,
         createdAt: serverTimestamp()
       })
-
+      console.log('✓ Rating notification created')
+  
+      console.log('Step 7: Deleting claim...')
       // Delete the claim
       await deleteDoc(doc(db, 'claims', claimId))
-
+      console.log('✓ Claim deleted')
+  
+      console.log('Step 8: Deleting post...')
       // Delete the post
       await deleteDoc(doc(db, 'posts', postId))
-
+      console.log('✓ Post deleted')
+  
+      console.log('Step 9: Deleting conversation...')
       // Delete the conversation
       await deleteDoc(doc(db, 'conversations', conversationId))
+      console.log('✓ Conversation deleted')
 
+      console.log('Step 10: Deleting all messages...')
+      await deleteConversationMessages(conversationId);
+      console.log('✓ All messages deleted');
+
+  
+      console.log('SUCCESS!')
+  
       // Success animation
       if (cardRef.current) {
         gsap.to(cardRef.current, {

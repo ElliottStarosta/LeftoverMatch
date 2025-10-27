@@ -153,9 +153,16 @@
 
         const { doc, deleteDoc } = await import('firebase/firestore')
 
-        for (const notif of notifications) {
-          await deleteDoc(doc(db, 'notifications', notif.id))
-        }
+        // Delete all notifications from database
+        await Promise.all(
+          notifications.map(notif => 
+            deleteDoc(doc(db, 'notifications', notif.id))
+          )
+        )
+
+        // Clear local state immediately
+        setNotifications([])
+        setShowNotifications(false)
       } catch (error) {
         console.error('Error clearing notifications:', error)
       }
