@@ -444,7 +444,7 @@ export async function getPersonalizedFeed({
     const userDoc = await getDoc(doc(db, 'users', userId))
     if (!userDoc.exists()) {
       console.warn('⚠️ User profile not found, redirecting to profile setup')
-  return { posts: [], hasMore: false, lastTimestamp: null }
+      return { posts: [], hasMore: false, lastTimestamp: null }
     }
     const user = userDoc.data() as User
     
@@ -501,14 +501,23 @@ export async function getPersonalizedFeed({
       const post = { id: postDoc.id, ...postDoc.data() } as Post
       processedCount++
       
+      console.log(`\n🔍 Processing post ${processedCount}:`, {
+        id: post.id,
+        title: post.title,
+        userId: post.userId,
+        location: post.location
+      })
+      
       // Skip own posts
       if (post.userId === userId) {
+        console.log(`❌ FILTERED: Own post (userId: ${post.userId})`)
         filteredCount++
         continue
       }
       
       // Skip already seen posts
       if (excludedPostIds.includes(post.id)) {
+        console.log(`❌ FILTERED: Already seen (excludedPostIds)`)
         filteredCount++
         continue
       }
@@ -525,7 +534,10 @@ export async function getPersonalizedFeed({
         post.location.lng
       )
       
+      console.log(`📏 Distance: ${distance.toFixed(2)} miles (max: ${maxDistance} miles)`)
+      
       if (distance > maxDistance) {
+        console.log(`❌ FILTERED: Too far away (${distance.toFixed(2)} > ${maxDistance} miles)`)
         filteredCount++
         continue
       }
@@ -552,8 +564,12 @@ export async function getPersonalizedFeed({
         posterTrustScore
       )
       
+      console.log(`📊 Score: ${score.toFixed(2)}, Compatibility: ${compatibilityPercentage}%`)
+      console.log(`📝 Match reasons:`, matchReasons)
+      
       // Only include if passed all filters (score > 0)
       if (score > 0) {
+        console.log(`✅ ACCEPTED: Post passed all filters`)
         scoredPosts.push({
           ...post,
           score,
@@ -568,6 +584,7 @@ export async function getPersonalizedFeed({
           compatibilityPercentage
         })
       } else {
+        console.log(`❌ FILTERED: Score was 0 (failed scoring criteria)`)
         filteredCount++
       }
       

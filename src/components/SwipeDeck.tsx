@@ -10,11 +10,13 @@ import { createClaim, isPostAvailable } from '@/lib/claims'
 import FoodCard from './FoodCard'
 import ClaimModal from './ClaimModal'
 import { useRouter } from 'next/navigation'
+import { useMotionValue, useTransform, PanInfo } from 'framer-motion'
+
 
 export default function SwipeDeck() {
   const { user, loading } = useAuth()
   const router = useRouter()
-  
+
   // State
   const [posts, setPosts] = useState<AlgorithmPost[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -26,11 +28,26 @@ export default function SwipeDeck() {
   const [currentClaimId, setCurrentClaimId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [claiming, setClaiming] = useState(false)
-  
+
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  const rotate = useTransform(x, [-200, 200], [-25, 25])
+  const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0])
+
+
   // Pagination state
   const [hasMore, setHasMore] = useState(true)
   const [lastTimestamp, setLastTimestamp] = useState<Date | null>(null)
-  const [excludedPostIds, setExcludedPostIds] = useState<string[]>([])
+  const [excludedPostIds, setExcludedPostIds] = useState<string[]>(() => {
+    // Load excluded posts from localStorage on mount
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('excludedPostIds')
+      return stored ? JSON.parse(stored) : []
+    }
+    return []
+  })
+
+ 
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -45,10 +62,10 @@ export default function SwipeDeck() {
   useEffect(() => {
     const loadInitialPosts = async () => {
       if (!user) return
-      
+
       setLoadingPosts(true)
       setError(null)
-      
+
       try {
         console.log('📥 Loading initial batch...')
         const result = await getPersonalizedFeed({
@@ -56,12 +73,12 @@ export default function SwipeDeck() {
           batchSize: 10,
           excludedPostIds
         })
-        
+
         console.log('✅ Initial load complete:', result.posts.length, 'posts')
         setPosts(result.posts)
         setHasMore(result.hasMore)
         setLastTimestamp(result.lastTimestamp)
-        
+
         if (result.posts.length === 0) {
           setError('No food posts available in your area. Try expanding your search radius or check back later!')
         }
@@ -77,6 +94,12 @@ export default function SwipeDeck() {
     loadInitialPosts()
   }, [user])
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && excludedPostIds.length > 0) {
+      localStorage.setItem('excludedPostIds', JSON.stringify(excludedPostIds))
+    }
+  }, [excludedPostIds])
+
   // ============================================
   // INFINITE SCROLL - Load more when near end
   // ============================================
@@ -85,10 +108,10 @@ export default function SwipeDeck() {
       console.log('⏭️ Skipping load more:', { hasMore, loadingMore, loadingPosts })
       return
     }
-    
+
     console.log('🔄 Loading more posts...')
     setLoadingMore(true)
-    
+
     try {
       const result = await getPersonalizedFeed({
         userId: user.uid,
@@ -96,9 +119,9 @@ export default function SwipeDeck() {
         lastPostTimestamp: lastTimestamp || undefined,
         excludedPostIds
       })
-      
+
       console.log('✅ Loaded', result.posts.length, 'more posts')
-      
+
       if (result.posts.length > 0) {
         setPosts(prev => [...prev, ...result.posts])
         setHasMore(result.hasMore)
@@ -118,32 +141,116 @@ export default function SwipeDeck() {
   // TRIGGER LOAD MORE - When 2 cards left
   // ============================================
   useEffect(() => {
-    // When user is 2 cards away from the end, fetch more
     const remainingCards = posts.length - currentIndex
-    
+
     if (remainingCards <= 2 && hasMore && !loadingMore && !loadingPosts) {
       console.log('⚠️ Near end of deck (', remainingCards, 'cards left), loading more...')
+      loadMorePosts()
+    }
+
+    // NEW: If we have NO cards left and there might be more, try loading
+    if (remainingCards === 0 && hasMore && !loadingMore && !loadingPosts) {
+      console.log('⚠️ Ran out of cards, loading more...')
       loadMorePosts()
     }
   }, [currentIndex, posts.length, hasMore, loadingMore, loadingPosts])
 
   const currentPost = posts[currentIndex]
 
+  useEffect(() => {
+    const container = document.querySelector('.card-drag-container');
+    if (!container || !currentPost) return;
+  
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+  
+    const handlePointerDown = (e: PointerEvent | TouchEvent) => {
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      
+      console.log('👇 POINTER DOWN - Starting drag');
+      isDragging = true;
+      startX = clientX;
+      startY = clientY;
+    };
+  
+    const handlePointerMove = (e: PointerEvent | TouchEvent) => {
+      if (!isDragging) return;
+      
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      
+      const deltaX = clientX - startX;
+      const deltaY = clientY - startY;
+      
+      console.log('👆 DRAGGING - deltaX:', deltaX);
+      
+      x.set(deltaX);
+      y.set(deltaY);
+    };
+  
+    const handlePointerUp = (e: PointerEvent | TouchEvent) => {
+      if (!isDragging) return;
+      
+      const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : e.clientX;
+      const deltaX = clientX - startX;
+      
+      console.log('🎯 DRAG END - deltaX:', deltaX);
+      isDragging = false;
+  
+      const threshold = 100;
+      if (Math.abs(deltaX) > threshold) {
+        console.log('✅ SWIPE DETECTED! Direction:', deltaX > 0 ? 'RIGHT' : 'LEFT');
+        if (deltaX > 0) {
+          handleSwipeRight();
+        } else {
+          handleSwipeLeft();
+        }
+      } else {
+        console.log('❌ NOT ENOUGH DISTANCE - Resetting');
+        x.set(0);
+        y.set(0);
+      }
+    };
+  
+    container.addEventListener('mousedown', handlePointerDown as any);
+    container.addEventListener('mousemove', handlePointerMove as any);
+    container.addEventListener('mouseup', handlePointerUp as any);
+    container.addEventListener('touchstart', handlePointerDown as any);
+    container.addEventListener('touchmove', handlePointerMove as any);
+    container.addEventListener('touchend', handlePointerUp as any);
+  
+    return () => {
+      container.removeEventListener('mousedown', handlePointerDown as any);
+      container.removeEventListener('mousemove', handlePointerMove as any);
+      container.removeEventListener('mouseup', handlePointerUp as any);
+      container.removeEventListener('touchstart', handlePointerDown as any);
+      container.removeEventListener('touchmove', handlePointerMove as any);
+      container.removeEventListener('touchend', handlePointerUp as any);
+    };
+  }, [currentPost, claiming]);
+
   // ============================================
   // SWIPE HANDLERS
   // ============================================
   const handleSwipeLeft = () => {
     if (!currentPost) return
-    
+
     console.log('⬅️ Swiping left on:', currentPost.title)
     setSwipeDirection('left')
-    
-    // Add to excluded posts so it doesn't show up again
-    setExcludedPostIds(prev => [...prev, currentPost.id])
-    
+
+    setExcludedPostIds(prev => {
+      const updated = [...prev, currentPost.id]
+      // Keep only last 100 to prevent localStorage bloat
+      return updated.slice(-100)
+    })
+
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1)
       setSwipeDirection(null)
+      x.set(0)
+      y.set(0)
     }, 300)
   }
 
@@ -163,50 +270,61 @@ export default function SwipeDeck() {
     console.log('➡️ Swiping right on:', currentPost.title)
     setClaiming(true)
     setSwipeDirection('right')
-    
+
     try {
-      // Check if post is still available
       console.log('🔍 Checking availability...')
       const isAvailable = await isPostAvailable(currentPost.id)
       if (!isAvailable) {
         console.log('❌ Post no longer available')
-        setExcludedPostIds(prev => [...prev, currentPost.id])
+        setExcludedPostIds(prev => {
+          const updated = [...prev, currentPost.id]
+          return updated.slice(-100)
+        })
         setCurrentIndex(prev => prev + 1)
         setSwipeDirection(null)
         setClaiming(false)
+
         throw new Error('This food has already been claimed')
       }
-      
-      // Create claim - this locks the post
+
       console.log('🔒 Creating claim...')
       const claimId = await createClaim(user.uid, currentPost.id, currentPost.userId)
       console.log('✅ Claim created:', claimId)
-      
+
       // Add to excluded posts
-      setExcludedPostIds(prev => [...prev, currentPost.id])
-      
-      // Show modal
+      setExcludedPostIds(prev => {
+        const updated = [...prev, currentPost.id]
+        return updated.slice(-100)
+      })
+
       setSelectedPost(currentPost)
       setCurrentClaimId(claimId)
       setShowClaimModal(true)
       setSwipeDirection(null)
       setClaiming(false)
-      
+
       console.log('🎉 Modal opened for claimed post')
     } catch (error) {
       console.error('❌ Claim failed:', error)
       alert(error instanceof Error ? error.message : 'Failed to claim food')
       setSwipeDirection(null)
       setClaiming(false)
+    } finally {
+      setSwipeDirection(null)
+      setClaiming(false)
+      x.set(0)
+      y.set(0)
     }
   }
+
+
 
   const handleCloseModal = () => {
     console.log('❌ Closing modal')
     setShowClaimModal(false)
     setCurrentClaimId(null)
     setSelectedPost(null)
-    
+
     // Move to next card
     setCurrentIndex(prev => prev + 1)
   }
@@ -217,7 +335,7 @@ export default function SwipeDeck() {
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (showClaimModal) return
-      
+
       switch (event.key) {
         case 'ArrowLeft':
           handleSwipeLeft()
@@ -260,7 +378,7 @@ export default function SwipeDeck() {
           <p className="text-gray-600 mb-4 text-sm">
             {error || "You've seen all available food. Check back later!"}
           </p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="bg-orange-500 text-white px-4 py-2 rounded-full font-semibold hover:bg-orange-600 transition-colors text-sm"
           >
@@ -291,44 +409,42 @@ export default function SwipeDeck() {
   return (
     <div className="relative h-full flex flex-col">
       {/* Card Stack */}
-      <div className="relative flex-1 min-h-0">
+      <div className="relative flex-1 min-h-0 card-drag-container" style={{ touchAction: 'none' }}>
         {currentPost && (
-          <AnimatePresence>
-            <motion.div
-              key={currentPost.id}
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ 
-                scale: 1, 
-                opacity: 1,
-                x: swipeDirection === 'left' ? -300 : swipeDirection === 'right' ? 300 : 0,
-                rotate: swipeDirection === 'left' ? -15 : swipeDirection === 'right' ? 15 : 0
-              }}
-              exit={{ 
-                scale: 0.95, 
-                opacity: 0,
-                x: swipeDirection === 'left' ? -300 : 300,
-                rotate: swipeDirection === 'left' ? -15 : 15
-              }}
-              transition={{ duration: 0.3 }}
-              className="absolute inset-0"
-            >
+          <motion.div
+            key={currentPost.id}
+            style={{
+              x,
+              y,
+              rotate,
+              opacity
+            }}
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{
+              scale: 1,
+              opacity: swipeDirection ? 0 : 1
+            }}
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0 pointer-events-none"
+          >
+            <div className="pointer-events-auto h-full w-full">
               <FoodCard post={currentPost} />
-            </motion.div>
-          </AnimatePresence>
+            </div>
+          </motion.div>
         )}
-        
+  
         {/* Loading More Indicator */}
         {loadingMore && (
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg z-10">
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg z-10 pointer-events-none">
             <div className="flex items-center gap-2">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
               <span className="text-sm text-gray-600">Loading more...</span>
             </div>
           </div>
         )}
-                
+  
       </div>
-
+  
       {/* Action Buttons */}
       <div className="flex gap-16 justify-center mt-4">
         {/* Swipe Left (Reject) */}
@@ -343,7 +459,7 @@ export default function SwipeDeck() {
         >
           <XMarkIcon className="w-8 h-8" />
         </button>
-
+  
         {/* Swipe Right (Like/Claim) */}
         <button
           onClick={handleSwipeRight}
@@ -361,7 +477,7 @@ export default function SwipeDeck() {
           )}
         </button>
       </div>
-
+  
       {/* Claim Modal */}
       {showClaimModal && selectedPost && user && currentClaimId && (
         <ClaimModal

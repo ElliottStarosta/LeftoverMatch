@@ -42,8 +42,7 @@ export default function FoodCard({ post }: FoodCardProps) {
   return (
     <>
       <div
-        onClick={() => setShowDetails(true)}
-        className="bg-white rounded-3xl shadow-2xl overflow-hidden h-full flex flex-col relative cursor-pointer hover:scale-[1.02] transition-transform duration-200"
+        className="bg-white rounded-3xl shadow-2xl overflow-hidden h-full flex flex-col relative"
       >
         {/* Main Image */}
         <div className="relative flex-1 min-h-0 bg-gray-200">
@@ -76,10 +75,11 @@ export default function FoodCard({ post }: FoodCardProps) {
           {/* Info icon */}
           <button
             onClick={(e) => {
+              e.preventDefault()
               e.stopPropagation()
               setShowDetails(true)
             }}
-            className="absolute top-4 left-4 w-10 h-10 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+            className="absolute top-4 left-4 w-10 h-10 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-10 pointer-events-auto"
           >
             <InformationCircleIcon className="w-5 h-5 text-gray-700" />
           </button>
@@ -100,7 +100,7 @@ export default function FoodCard({ post }: FoodCardProps) {
                   }
                 </span>
               </div>
-              
+
             </div>
 
             <div className="flex items-center justify-between text-white">

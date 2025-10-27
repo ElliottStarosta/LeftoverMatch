@@ -5,9 +5,138 @@ import CustomDateTimePicker from './CustomDateTimePicker'
 import { useRouter } from 'next/navigation'
 import { collection, addDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase-client'
+import { getDb } from '@/lib/firebase-utils'
 import { useAuth } from '@/lib/useAuth'
 import { Post } from '@/types'
 import { gsap } from 'gsap'
+
+
+async function createRandomFoodPosts() {
+  const db = getDb()
+  const { collection, addDoc } = await import('firebase/firestore')
+  
+  // Your location
+  const baseLocation = {
+    lat: 45.3026,
+    lng: -75.9070,
+    address: 'Ottawa, ON'
+  }
+  
+  // Random food posts data
+  const foodPosts = [
+    {
+      title: 'Fresh Pizza Slices',
+      description: 'Half a large pepperoni pizza from dinner. Still warm and delicious!',
+      photoUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800',
+      allergens: ['Gluten', 'Dairy']
+    },
+    {
+      title: 'Homemade Lasagna',
+      description: 'Made too much lasagna tonight. 3 generous portions available. Vegetarian!',
+      photoUrl: 'https://images.unsplash.com/photo-1574894709920-11b28e7367e3?w=800',
+      allergens: ['Gluten', 'Dairy', 'Eggs']
+    },
+    {
+      title: 'Sushi Rolls',
+      description: 'Leftover sushi from lunch. California rolls and salmon nigiri. Refrigerated.',
+      photoUrl: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=800',
+      allergens: ['Fish', 'Soy', 'Sesame']
+    },
+    {
+      title: 'Chicken Tacos',
+      description: '5 soft chicken tacos with all the fixings. Just made them!',
+      photoUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800',
+      allergens: ['Gluten']
+    },
+    {
+      title: 'Pasta Primavera',
+      description: 'Healthy veggie pasta with olive oil and garlic. Made fresh today.',
+      photoUrl: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=800',
+      allergens: ['Gluten']
+    },
+    {
+      title: 'Burger and Fries',
+      description: 'Extra burger and fries from BBQ. Still hot!',
+      photoUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800',
+      allergens: ['Gluten', 'Dairy']
+    },
+    {
+      title: 'Pad Thai',
+      description: 'Authentic homemade pad thai. Extra spicy! 2 portions available.',
+      photoUrl: 'https://images.unsplash.com/photo-1559314809-0d155014e29e?w=800',
+      allergens: ['Peanuts', 'Shellfish', 'Soy']
+    },
+    {
+      title: 'Caesar Salad',
+      description: 'Fresh caesar salad with grilled chicken. Made 30 mins ago.',
+      photoUrl: 'https://images.unsplash.com/photo-1546793665-c74683f339c1?w=800',
+      allergens: ['Dairy', 'Eggs']
+    },
+    {
+      title: 'Fried Rice',
+      description: 'Vegetable fried rice with tofu. Perfect for lunch!',
+      photoUrl: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=800',
+      allergens: ['Soy', 'Eggs']
+    },
+    {
+      title: 'Chocolate Cake',
+      description: 'Homemade chocolate cake. 4 slices left from birthday party!',
+      photoUrl: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800',
+      allergens: ['Gluten', 'Dairy', 'Eggs']
+    }
+  ]
+  
+  // Create posts
+  const createdPosts = []
+  
+  for (const food of foodPosts) {
+    // Random location within 2 miles of base location
+    const randomLat = baseLocation.lat + (Math.random() - 0.5) * 0.03 // ~1 mile radius
+    const randomLng = baseLocation.lng + (Math.random() - 0.5) * 0.03
+    
+    const now = new Date()
+    const pickupStart = new Date(now.getTime() + Math.random() * 2 * 60 * 60 * 1000) // 0-2 hours from now
+    const pickupEnd = new Date(pickupStart.getTime() + 2 * 60 * 60 * 1000) // 2 hours after start
+    
+    const postData = {
+      userId: 'WeGN4UaStaUkeZB3zuNNMRDHO4L2', // ⚠️ IMPORTANT: Replace with your actual Firebase Auth user ID
+      title: food.title,
+      description: food.description,
+      photoUrl: food.photoUrl,
+      location: {
+        lat: randomLat,
+        lng: randomLng,
+        address: baseLocation.address
+      },
+      status: 'available',
+      createdAt: now,
+      expiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000), // 24 hours
+      quantity: Math.floor(Math.random() * 3) + 1, // 1-3 portions
+      pickupWindow: {
+        start: pickupStart,
+        end: pickupEnd
+      },
+      foodMeta: {
+        homemade: Math.random() > 0.5,
+        refrigerated: Math.random() > 0.5,
+        preparedAt: now,
+        allergens: food.allergens
+      }
+    }
+    
+    try {
+      const docRef = await addDoc(collection(db, 'posts'), postData)
+      console.log('✅ Created post:', food.title, 'ID:', docRef.id)
+      createdPosts.push(docRef.id)
+    } catch (error) {
+      console.error('❌ Error creating post:', food.title, error)
+    }
+  }
+  
+  console.log('🎉 Created', createdPosts.length, 'posts!')
+  return createdPosts
+}
+
 
 export default function CreatePostPage() {
   const { user, loading } = useAuth()
@@ -52,6 +181,12 @@ export default function CreatePostPage() {
     { value: 'Fish', emoji: '🐠' },
     { value: 'Peanuts', emoji: '🥜' }
   ]
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).createRandomFoodPosts = createRandomFoodPosts;
+    }
+  }, [])
 
   useEffect(() => {
     setMounted(true)
