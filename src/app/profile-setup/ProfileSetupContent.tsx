@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { getDb } from '@/lib/firebase-utils'
 import { useAuth } from '@/lib/useAuth'
 import { User } from '@/types'
+import { geocodeAddress } from '@/lib/geocoding'
+
 import { gsap } from 'gsap'
 
 export default function ProfileSetupPage() {
@@ -27,6 +29,8 @@ export default function ProfileSetupPage() {
     const [saving, setSaving] = useState(false)
     const [mounted, setMounted] = useState(false)
     const [randomTip, setRandomTip] = useState('')
+    const [error, setError] = useState('')
+
 
     const loadingTips = [
         "💡 Tip: The more you share, the better your matches!",
@@ -186,6 +190,13 @@ export default function ProfileSetupPage() {
             )
         }
     }, [step, mounted])
+
+    useEffect(() => {
+        if (mounted && step === 4 && formData.lat === 0 && formData.lng === 0) {
+            console.log('🚀 Auto-fetching location on step 4...')
+            handleLocationPermission()
+        }
+    }, [mounted, step])
 
     const dietaryOptions = [
         { value: 'Vegetarian', emoji: '🥗' },
@@ -404,6 +415,23 @@ export default function ProfileSetupPage() {
         }
 
         try {
+
+            const formDataWithLocation = { ...formData }
+
+            if (formDataWithLocation.location && (formDataWithLocation.lat === 0 || formDataWithLocation.lng === 0)) {
+                console.log('📍 Manual address entered, geocoding...')
+                const coords = await geocodeAddress(formDataWithLocation.location)
+                if (coords) {
+                    formDataWithLocation.lat = coords.lat
+                    formDataWithLocation.lng = coords.lng
+                    console.log('✅ Geocoded:', coords)
+                } else {
+                    setError('Could not find location. Please use the location button or enter a valid address.')
+                    setSaving(false)
+                    return
+                }
+            }
+
             const userData: User = {
                 uid: user.uid,
                 name: formData.name,
@@ -414,7 +442,8 @@ export default function ProfileSetupPage() {
                 totalClaims: 0,
                 completedClaims: 0,
                 expiredClaims: 0,
-                trustScore: 1.0,
+                trustScore: 0.5,  // Start at 2.5/5 stars (neutral)
+                totalRatings: 0,
                 level: 'Rookie Rescuer',
                 maxClaimsAllowed: 1,
                 banned: false,
@@ -580,17 +609,69 @@ export default function ProfileSetupPage() {
                                             />
                                         </div>
 
+                                        // Replace the "Profile Photo URL" section around line 346 with:
                                         <div className="group">
                                             <label className="block text-sm font-bold text-gray-700 mb-2">
-                                                Profile Photo URL 📸
+                                                Profile Photo 📸
                                             </label>
-                                            <input
-                                                type="url"
-                                                value={formData.profileImage}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, profileImage: e.target.value }))}
-                                                className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-gray-900 bg-white transition-all duration-300 group-hover:border-gray-300"
-                                                placeholder="https://example.com/photo.jpg"
-                                            />
+                                            {formData.profileImage ? (
+                                                <div className="space-y-3">
+                                                    <img
+                                                        src={formData.profileImage}
+                                                        alt="Preview"
+                                                        className="w-32 h-32 object-cover rounded-full mx-auto shadow-lg"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData(prev => ({ ...prev, profileImage: '' }))}
+                                                        className="text-red-500 text-sm font-semibold hover:text-red-700 px-4 py-2 rounded-full hover:bg-red-50 transition-all duration-300 mx-auto block"
+                                                    >
+                                                        🗑️ Remove Image
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="border-3 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:border-orange-400 transition-all duration-300 bg-gradient-to-br from-orange-50/50 to-amber-50/50">
+                                                    <div className="text-6xl mb-3">📷</div>
+                                                    <p className="text-gray-600 font-medium mb-4">Upload your profile photo</p>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={async (e) => {
+                                                            const file = e.target.files?.[0]
+                                                            if (file) {
+                                                                try {
+                                                                    const formDataToSend = new FormData()
+                                                                    formDataToSend.append('image', file)
+
+                                                                    const uploadResponse = await fetch(
+                                                                        `https://api.imgbb.com/1/upload?key=${process.env.NEXT_PUBLIC_IMGBB_API_KEY}`,
+                                                                        {
+                                                                            method: 'POST',
+                                                                            body: formDataToSend
+                                                                        }
+                                                                    )
+
+                                                                    if (!uploadResponse.ok) throw new Error('Failed to upload')
+
+                                                                    const uploadData = await uploadResponse.json()
+                                                                    setFormData(prev => ({ ...prev, profileImage: uploadData.data.url }))
+                                                                } catch (error) {
+                                                                    console.error('Upload error:', error)
+                                                                    alert('Failed to upload image')
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="hidden"
+                                                        id="profile-image-upload"
+                                                    />
+                                                    <label
+                                                        htmlFor="profile-image-upload"
+                                                        className="inline-block bg-gradient-to-r from-orange-500 to-amber-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-orange-600 hover:to-amber-600 cursor-pointer transform hover:scale-105 transition-all duration-300 shadow-lg"
+                                                    >
+                                                        Choose Photo
+                                                    </label>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </>

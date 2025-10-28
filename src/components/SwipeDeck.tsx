@@ -47,6 +47,23 @@ export default function SwipeDeck() {
     return []
   })
 
+  useEffect(() => {
+    // Clean up expired posts when component mounts
+    const cleanup = async () => {
+      const { checkAndDeleteExpiredPosts } = await import('@/lib/cleanup')
+      const deleted = await checkAndDeleteExpiredPosts()
+      if (deleted > 0) {
+        console.log(`🗑️ Cleaned up ${deleted} expired posts`)
+      }
+    }
+    
+    cleanup()
+    
+    // Run cleanup every 5 minutes
+    const interval = setInterval(cleanup, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [])
+
  
 
   // Redirect if not authenticated
@@ -409,7 +426,7 @@ export default function SwipeDeck() {
   return (
     <div className="relative h-full flex flex-col">
       {/* Card Stack */}
-      <div className="relative flex-1 min-h-0 card-drag-container" style={{ touchAction: 'none' }}>
+      <div className="relative flex-1 min-h-0 card-drag-container"   style={{ touchAction: 'none' }}>
         {currentPost && (
           <motion.div
             key={currentPost.id}

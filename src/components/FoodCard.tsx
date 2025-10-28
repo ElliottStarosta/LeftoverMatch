@@ -42,7 +42,10 @@ export default function FoodCard({ post }: FoodCardProps) {
   return (
     <>
       <div
-        className="bg-white rounded-3xl shadow-2xl overflow-hidden h-full flex flex-col relative"
+        className="bg-white rounded-3xl shadow-2xl overflow-hidden h-full flex flex-col relative"  style={{ 
+          touchAction: showDetails ? 'pan-y' : 'none',
+          pointerEvents: showDetails ? 'none' : 'auto'
+        }} 
       >
         {/* Main Image */}
         <div className="relative flex-1 min-h-0 bg-gray-200">

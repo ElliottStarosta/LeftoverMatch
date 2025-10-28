@@ -52,6 +52,121 @@ body {
   background: #555;
 }
 
-#next-logo {
-  display: none !important;
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  /* Remove padding for full-screen mobile experience */
+  body {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Navbar mobile fix */
+  nav {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  /* Hide navbar when in messages */
+  .messages-page nav {
+    display: none;
+  }
+
+  /* Full screen chat on mobile */
+  .h-screen {
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile browsers */
+  }
+
+  /* Safe area for bottom input */
+  .safe-bottom {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  /* Card swipe area - CRITICAL FIX */
+  .swipe-deck {
+    height: calc(100vh - 200px);
+    max-height: calc(100vh - 200px);
+  }
+
+  /* Card container - ensure full visibility */
+  .card-drag-container {
+    width: 100% !important;
+    height: 100% !important;
+    position: relative !important;
+  }
+
+  /* Ensure cards are visible and properly sized */
+  .card-drag-container > div {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  nav .nav-item svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  
+  /* Compact notification dropdown */
+  .notification-dropdown {
+    width: 90vw !important;
+    right: 5vw !important;
+  }
+  
+  /* Mobile-friendly buttons */
+  nav .nav-item {
+    padding: 0.625rem;
+  }
+
+  /* Prevent overscroll bounce on iOS */
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Prevent pull-to-refresh on cards */
+  .card-drag-container {
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: auto;
+  }
+}
+
+/* Touch-friendly tap targets */
+@media (hover: none) and (pointer: coarse) {
+  button, a, input, textarea, select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Larger touch targets for message bubbles */
+  .message-bubble {
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Smooth transitions */
+@supports (backdrop-filter: blur(10px)) {
+  .backdrop-blur-xl {
+    backdrop-filter: blur(16px);
+  }
+}
+
+/* Fix iOS Safari viewport height issues */
+@supports (-webkit-touch-callout: none) {
+  .h-screen {
+    height: -webkit-fill-available;
+  }
+}
+
+/* Prevent text selection on draggable cards */
+.card-drag-container * {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Allow text selection in modals */
+.fixed * {
+  user-select: text;
+  -webkit-user-select: text;
 }

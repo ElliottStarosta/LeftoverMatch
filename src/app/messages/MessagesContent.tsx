@@ -13,7 +13,8 @@ import {
   CheckCircleIcon,
   MapPinIcon,
   UserIcon,
-  CheckIcon
+  CheckIcon,
+  ChevronLeftIcon
 } from '@heroicons/react/24/outline'
 import { HeartIcon } from '@heroicons/react/24/solid'
 
@@ -74,11 +75,22 @@ export default function MessagesContent() {
   const [accepting, setAccepting] = useState(false)
   const [typingStatus, setTypingStatus] = useState<TypingStatus>({})
   const [showRatingModal, setShowRatingModal] = useState(false)
-
+  const [isMobile, setIsMobile] = useState(false)
+  const [showChatView, setShowChatView] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
+
+  // Detect mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Entrance animation
   useEffect(() => {
@@ -141,6 +153,9 @@ export default function MessagesContent() {
             const convo = convos.find(c => c.id === conversationId)
             if (convo) {
               setSelectedConversation(convo)
+              if (window.innerWidth < 768) {
+                setShowChatView(true)
+              }
             }
           }
 
@@ -168,7 +183,7 @@ export default function MessagesContent() {
       const usersData: Record<string, UserData> = {}
 
       for (const userId of userIds) {
-        if (userData[userId]) continue // Skip if already loaded
+        if (userData[userId]) continue
 
         const userDoc = await getDoc(doc(db, 'users', userId))
         if (userDoc.exists()) {
@@ -207,7 +222,6 @@ export default function MessagesContent() {
 
           setMessages(msgs)
 
-          // Scroll to bottom
           setTimeout(() => {
             messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
           }, 100)
@@ -222,13 +236,12 @@ export default function MessagesContent() {
     loadMessages()
   }, [selectedConversation])
 
-  // Local typing state - NO FIREBASE
-  const [localTypingStatus, setLocalTypingStatus] = useState<Record<string, number>>({})
+  // Local typing state
   const lastTypingUpdateRef = useRef<number>(0)
   const isCurrentlyTypingRef = useRef<boolean>(false)
   const typingTimeoutRef = useRef<NodeJS.Timeout>()
 
-  // Listen for typing indicators (read-only, efficient)
+  // Listen for typing indicators
   useEffect(() => {
     if (!selectedConversation || !authUser) return
 
@@ -253,7 +266,7 @@ export default function MessagesContent() {
   }, [selectedConversation, authUser])
 
   // Handle typing indicator - DEBOUNCED with local state
-  const handleTyping = () => {
+  const handleTyping = async () => {
     if (!selectedConversation || !authUser) return
 
     const now = Date.now()
@@ -268,17 +281,21 @@ export default function MessagesContent() {
     }
 
     // Set timeout to stop typing after 2 seconds of inactivity
-    typingTimeoutRef.current = setTimeout(() => {
+    typingTimeoutRef.current = setTimeout(async () => {
       const db = getDb()
       if (!db) return
 
       isCurrentlyTypingRef.current = false
 
-      import('firebase/firestore').then(({ doc, deleteField, updateDoc }) => {
-        updateDoc(doc(db, 'typing', selectedConversation.id), {
+      try {
+        const { doc, deleteField, updateDoc } = await import('firebase/firestore')
+        await updateDoc(doc(db, 'typing', selectedConversation.id), {
           [authUser.uid]: deleteField()
-        }).catch(() => { })
-      })
+        })
+      } catch (error) {
+        // Silently fail - typing indicators are not critical
+        console.log('Clear typing error (non-critical):', error)
+      }
     }, 2000)
 
     // Only update Firebase every 2 seconds MAX
@@ -294,11 +311,14 @@ export default function MessagesContent() {
       const db = getDb()
       if (!db) return
 
-      import('firebase/firestore').then(({ doc, setDoc }) => {
-        setDoc(doc(db, 'typing', selectedConversation.id), {
+      try {
+        const { doc, setDoc } = await import('firebase/firestore')
+        await setDoc(doc(db, 'typing', selectedConversation.id), {
           [authUser.uid]: now
-        }, { merge: true }).catch(() => { })
-      })
+        }, { merge: true })
+      } catch (error) {
+        console.log('Update typing error (non-critical):', error)
+      }
       return
     }
 
@@ -309,13 +329,15 @@ export default function MessagesContent() {
     const db = getDb()
     if (!db) return
 
-    import('firebase/firestore').then(({ doc, setDoc }) => {
-      setDoc(doc(db, 'typing', selectedConversation.id), {
+    try {
+      const { doc, setDoc } = await import('firebase/firestore')
+      await setDoc(doc(db, 'typing', selectedConversation.id), {
         [authUser.uid]: now
-      }, { merge: true }).catch(() => {
-        // Silently fail - not critical
-      })
-    })
+      }, { merge: true })
+    } catch (error) {
+      // Silently fail - not critical
+      console.log('Set typing error (non-critical):', error)
+    }
   }
 
   // Cleanup typing status when unmounting or switching conversations
@@ -337,7 +359,9 @@ export default function MessagesContent() {
       import('firebase/firestore').then(({ doc, deleteField, updateDoc }) => {
         updateDoc(doc(db, 'typing', selectedConversation.id), {
           [authUser.uid]: deleteField()
-        }).catch(() => { })
+        }).catch(() => {
+          // Silently fail
+        })
       })
     }
   }, [selectedConversation, authUser])
@@ -356,9 +380,13 @@ export default function MessagesContent() {
 
       // Clear typing status when sending message
       isCurrentlyTypingRef.current = false
-      updateDoc(doc(db, 'typing', selectedConversation.id), {
-        [authUser.uid]: deleteField()
-      }).catch(() => { })
+      try {
+        await updateDoc(doc(db, 'typing', selectedConversation.id), {
+          [authUser.uid]: deleteField()
+        })
+      } catch (error) {
+        // Ignore typing clear errors
+      }
 
       // Add message
       await addDoc(collection(db, 'messages'), {
@@ -405,14 +433,12 @@ export default function MessagesContent() {
 
       const { collection, addDoc, doc, updateDoc, getDoc, serverTimestamp } = await import('firebase/firestore')
 
-      // Get the post to get the address
       const postDoc = await getDoc(doc(db, 'posts', selectedConversation.postId))
       if (!postDoc.exists()) throw new Error('Post not found')
 
       const postData = postDoc.data()
       const fullAddress = postData.location?.address || 'Address not available'
 
-      // Update conversation
       await updateDoc(doc(db, 'conversations', selectedConversation.id), {
         status: 'accepted',
         claimAccepted: true,
@@ -420,7 +446,6 @@ export default function MessagesContent() {
         acceptedAt: serverTimestamp()
       })
 
-      // Send system message with address
       await addDoc(collection(db, 'messages'), {
         conversationId: selectedConversation.id,
         senderId: 'system',
@@ -430,13 +455,11 @@ export default function MessagesContent() {
         read: false
       })
 
-      // Update claim status
       await updateDoc(doc(db, 'claims', selectedConversation.claimId), {
         status: 'accepted',
         acceptedAt: serverTimestamp()
       })
 
-      // Send notification to claimer
       await addDoc(collection(db, 'notifications'), {
         userId: selectedConversation.claimerId,
         type: 'claim_accepted',
@@ -447,7 +470,6 @@ export default function MessagesContent() {
         createdAt: serverTimestamp()
       })
 
-      // Animate success
       const button = document.querySelector('.accept-button')
       if (button) {
         gsap.to(button, {
@@ -472,7 +494,6 @@ export default function MessagesContent() {
 
   const handleRatingComplete = () => {
     setShowRatingModal(false)
-    // Redirect to home
     router.push('/')
   }
 
@@ -480,6 +501,18 @@ export default function MessagesContent() {
     if (!selectedConversation?.postLocation) return
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(selectedConversation.postLocation)}`
     window.open(mapsUrl, '_blank')
+  }
+
+  const handleSelectConversation = (convo: Conversation) => {
+    setSelectedConversation(convo)
+    if (isMobile) {
+      setShowChatView(true)
+    }
+  }
+
+  const handleBackToList = () => {
+    setShowChatView(false)
+    setSelectedConversation(null)
   }
 
   if (authLoading || loading) {
@@ -502,11 +535,249 @@ export default function MessagesContent() {
   const isClaimAccepted = selectedConversation?.claimAccepted
   const isPoster = selectedConversation?.posterId === authUser.uid
 
-  // Check if other user is typing (within last 2 seconds)
   const isOtherUserTyping = selectedConversation && otherUserId &&
     typingStatus[selectedConversation.id]?.[otherUserId] &&
     (Date.now() - typingStatus[selectedConversation.id][otherUserId]) < 2000
 
+  // MOBILE LAYOUT
+  if (isMobile) {
+    // Show chat view
+    if (showChatView && selectedConversation) {
+      return (
+        <div className="h-screen bg-white flex flex-col">
+          {/* Chat Header */}
+          <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
+            <button
+              onClick={handleBackToList}
+              className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <ChevronLeftIcon className="w-6 h-6 text-gray-900" />
+            </button>
+            <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+              {otherUser?.photoURL ? (
+                <Image
+                  src={otherUser.photoURL}
+                  alt={otherUser.name}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center">
+                  <UserIcon className="w-5 h-5 text-white" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-gray-900 truncate">{otherUser?.name || 'Anonymous'}</h3>
+              <p className="text-xs text-gray-500 truncate">{selectedConversation.postTitle}</p>
+            </div>
+            {isClaimAccepted && (
+              <CheckCircleIcon className="w-6 h-6 text-green-500 flex-shrink-0" />
+            )}
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2 bg-white">
+            {messages.map((msg) => {
+              const isOwn = msg.senderId === authUser.uid
+              const isSystem = msg.type === 'system'
+
+              if (isSystem) {
+                return (
+                  <div key={msg.id} className="flex justify-center py-2">
+                    <div className="bg-gray-100 px-3 py-1.5 rounded-full text-xs text-gray-600 max-w-[80%] text-center">
+                      {msg.text}
+                    </div>
+                  </div>
+                )
+              }
+
+              return (
+                <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-[75%] px-3 py-2 rounded-2xl ${
+                      isOwn
+                        ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-br-md'
+                        : 'bg-gray-100 text-gray-900 rounded-bl-md'
+                    }`}
+                  >
+                    <p className="text-sm break-words">{msg.text}</p>
+                  </div>
+                </div>
+              )
+            })}
+
+            {isOtherUserTyping && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-bl-md">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Accept Claim Button */}
+          {isPoster && !isClaimAccepted && (
+            <div className="px-4 py-3 bg-green-50 border-t border-green-200">
+              <button
+                onClick={handleAcceptClaim}
+                disabled={accepting}
+                className="accept-button w-full bg-green-500 text-white py-3 px-4 rounded-xl font-semibold active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 transition-transform"
+              >
+                {accepting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Accepting...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircleIcon className="w-5 h-5" />
+                    Accept & Share Address
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Get Directions & Complete */}
+          {!isPoster && isClaimAccepted && selectedConversation.postLocation && (
+            <div className="px-4 py-3 bg-blue-50 border-t border-blue-200 space-y-2">
+              <button
+                onClick={handleGetDirections}
+                className="w-full bg-blue-500 text-white py-3 px-4 rounded-xl font-semibold active:scale-95 flex items-center justify-center gap-2 transition-transform"
+              >
+                <MapPinIcon className="w-5 h-5" />
+                Get Directions
+              </button>
+              <button
+                onClick={handleCompletePickup}
+                className="w-full bg-green-500 text-white py-3 px-4 rounded-xl font-semibold active:scale-95 flex items-center justify-center gap-2 transition-transform"
+              >
+                <CheckIcon className="w-5 h-5" />
+                Complete Pickup
+              </button>
+            </div>
+          )}
+
+          {/* Message Input */}
+          <form onSubmit={handleSendMessage} className="px-4 py-3 bg-white border-t border-gray-200">
+            <div className="flex gap-2 items-center">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => {
+                  setNewMessage(e.target.value)
+                  handleTyping()
+                }}
+                placeholder="Message..."
+                className="message-input flex-1 px-4 py-2.5 bg-gray-100 rounded-full focus:outline-none text-sm text-gray-900 placeholder-gray-500"
+                disabled={sending}
+              />
+              <button
+                type="submit"
+                disabled={!newMessage.trim() || sending}
+                className="bg-gradient-to-r from-orange-500 to-pink-500 text-white p-2.5 rounded-full disabled:opacity-50 active:scale-95 transition-transform flex-shrink-0"
+              >
+                <PaperAirplaneIcon className="w-5 h-5" />
+              </button>
+            </div>
+          </form>
+
+          {showRatingModal && otherUser && (
+            <RatingModal
+              conversationId={selectedConversation.id}
+              postId={selectedConversation.postId}
+              postTitle={selectedConversation.postTitle}
+              posterId={selectedConversation.posterId}
+              posterName={otherUser.name}
+              posterAvatar={otherUser.photoURL}
+              claimId={selectedConversation.claimId}
+              onClose={handleRatingComplete}
+              currentUserId={authUser.uid}
+            />
+          )}
+        </div>
+      )
+    }
+
+    // Show conversations list
+    return (
+      <div className="h-screen bg-white flex flex-col">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => router.push('/')}
+              className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <ArrowLeftIcon className="w-6 h-6 text-gray-900" />
+            </button>
+            <h1 className="text-xl font-bold text-gray-900">Messages</h1>
+            <div className="w-10"></div>
+          </div>
+        </div>
+
+        {/* Conversations List */}
+        <div className="flex-1 overflow-y-auto">
+          {conversations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full px-4">
+              <HeartIcon className="w-16 h-16 text-gray-300 mb-4" />
+              <p className="text-gray-600 text-center mb-1">No messages yet</p>
+              <p className="text-sm text-gray-400 text-center">Start swiping to connect!</p>
+            </div>
+          ) : (
+            <div ref={listRef}>
+              {conversations.map((convo) => {
+                const other = convo.participants.find(id => id !== authUser.uid)
+                const otherData = other ? userData[other] : null
+
+                return (
+                  <button
+                    key={convo.id}
+                    onClick={() => handleSelectConversation(convo)}
+                    className="w-full px-4 py-3 flex gap-3 items-center hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-100"
+                  >
+                    <div className="relative w-14 h-14 rounded-full overflow-hidden flex-shrink-0">
+                      <Image
+                        src={convo.postPhoto}
+                        alt={convo.postTitle}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="font-semibold text-gray-900 truncate text-sm">
+                          {otherData?.name || 'Anonymous'}
+                        </h3>
+                        {convo.claimAccepted && (
+                          <CheckCircleIcon className="w-5 h-5 text-green-500 flex-shrink-0 ml-2" />
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 truncate mb-0.5">{convo.postTitle}</p>
+                      {convo.lastMessage && (
+                        <p className="text-xs text-gray-400 truncate">
+                          {convo.lastMessage}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // DESKTOP LAYOUT
   return (
     <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-rose-50">
       <div className="max-w-7xl mx-auto p-4 h-screen flex flex-col">
@@ -531,14 +802,14 @@ export default function MessagesContent() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 min-h-0">
+        <div className="flex-1 grid grid-cols-3 gap-4 min-h-0">
           {/* Conversations List */}
           <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden flex flex-col">
             <div className="p-4 border-b border-gray-200">
               <h2 className="font-bold text-gray-900">Your Matches</h2>
             </div>
 
-            <div ref={listRef} className="flex-1 overflow-y-auto overflow-x-hidden p-4 w-full max-w-[420px] mx-auto">
+            <div ref={listRef} className="flex-1 overflow-y-auto p-4">
               {conversations.length === 0 ? (
                 <div className="text-center py-12 px-4">
                   <HeartIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -554,14 +825,15 @@ export default function MessagesContent() {
                   return (
                     <button
                       key={convo.id}
-                      onClick={() => setSelectedConversation(convo)}
-                      className={`w-full p-5 rounded-xl transition-all duration-200 mb-2 ${isSelected
-                          ? 'bg-gradient-to-r from-orange-100 to-pink-100 shadow-lg scale-105'
+                      onClick={() => handleSelectConversation(convo)}
+                      className={`w-full p-4 rounded-xl transition-all duration-200 mb-2 ${
+                        isSelected
+                          ? 'bg-gradient-to-r from-orange-100 to-pink-100 shadow-lg'
                           : 'hover:bg-gray-50 active:scale-95'
-                        }`}
+                      }`}
                     >
                       <div className="flex gap-3 items-center">
-                        <div className="relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
+                        <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
                           <Image
                             src={convo.postPhoto}
                             alt={convo.postTitle}
@@ -594,7 +866,7 @@ export default function MessagesContent() {
           </div>
 
           {/* Chat Area */}
-          <div className="md:col-span-2 bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden flex flex-col">
+          <div className="col-span-2 bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden flex flex-col">
             {selectedConversation ? (
               <>
                 {/* Chat Header */}
@@ -649,10 +921,11 @@ export default function MessagesContent() {
                     return (
                       <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                         <div
-                          className={`max-w-[75%] px-4 py-2.5 rounded-2xl ${isOwn
+                          className={`max-w-[75%] px-4 py-2.5 rounded-2xl ${
+                            isOwn
                               ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white'
                               : 'bg-white text-gray-800 shadow-sm'
-                            }`}
+                          }`}
                         >
                           <p className="text-sm">{msg.text}</p>
                           <p className={`text-xs mt-1 ${isOwn ? 'text-white/70' : 'text-gray-500'}`}>
@@ -663,7 +936,6 @@ export default function MessagesContent() {
                     )
                   })}
 
-                  {/* Typing Indicator */}
                   {isOtherUserTyping && (
                     <div className="flex justify-start">
                       <div className="bg-white px-4 py-3 rounded-2xl shadow-sm">
@@ -679,7 +951,7 @@ export default function MessagesContent() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Accept Claim Button (for poster) */}
+                {/* Accept Claim Button */}
                 {isPoster && !isClaimAccepted && (
                   <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-t border-green-200">
                     <button
@@ -705,7 +977,7 @@ export default function MessagesContent() {
                   </div>
                 )}
 
-                {/* Get Directions & Complete Pickup (for claimer after accepted) */}
+                {/* Get Directions & Complete Pickup */}
                 {!isPoster && isClaimAccepted && selectedConversation.postLocation && (
                   <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border-t border-blue-200 space-y-3">
                     <button
@@ -761,21 +1033,20 @@ export default function MessagesContent() {
           </div>
         </div>
       </div>
-      {/* Rating Modal */}
-  {showRatingModal && selectedConversation && otherUser && (
-    <RatingModal
-      conversationId={selectedConversation.id}
-      postId={selectedConversation.postId}
-      postTitle={selectedConversation.postTitle}
-      posterId={selectedConversation.posterId}
-      posterName={otherUser.name}
-      posterAvatar={otherUser.photoURL}
-      claimId={selectedConversation.claimId}
-      onClose={handleRatingComplete}
-      currentUserId={authUser.uid}
-    />
-  )}
-  
+
+      {showRatingModal && selectedConversation && otherUser && (
+        <RatingModal
+          conversationId={selectedConversation.id}
+          postId={selectedConversation.postId}
+          postTitle={selectedConversation.postTitle}
+          posterId={selectedConversation.posterId}
+          posterName={otherUser.name}
+          posterAvatar={otherUser.photoURL}
+          claimId={selectedConversation.claimId}
+          onClose={handleRatingComplete}
+          currentUserId={authUser.uid}
+        />
+      )}
     </div>
   )
 }
