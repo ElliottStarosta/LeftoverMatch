@@ -51,8 +51,9 @@ export default function SwipeDeck() {
     // Clean up expired posts when component mounts
     const cleanup = async () => {
       const { checkAndDeleteExpiredPosts } = await import('@/lib/cleanup')
-      const deleted = await checkAndDeleteExpiredPosts()
-      if (deleted > 0) {
+      const deleted = await checkAndDeleteExpiredPosts();
+      
+      if (deleted !== undefined && deleted > 0) {
         console.log(`🗑️ Cleaned up ${deleted} expired posts`)
       }
     }

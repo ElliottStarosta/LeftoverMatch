@@ -55,7 +55,7 @@ interface UserData {
 
 interface TypingStatus {
   [conversationId: string]: {
-    [userId: string]: boolean
+    [userId: string]: number
   }
 }
 
@@ -74,6 +74,7 @@ export default function MessagesContent() {
   const [userData, setUserData] = useState<Record<string, UserData>>({})
   const [accepting, setAccepting] = useState(false)
   const [typingStatus, setTypingStatus] = useState<TypingStatus>({})
+  const [localTypingStatus, setLocalTypingStatus] = useState<Record<string, number>>({})
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [showChatView, setShowChatView] = useState(false)
@@ -536,8 +537,9 @@ export default function MessagesContent() {
   const isPoster = selectedConversation?.posterId === authUser.uid
 
   const isOtherUserTyping = selectedConversation && otherUserId &&
-    typingStatus[selectedConversation.id]?.[otherUserId] &&
-    (Date.now() - typingStatus[selectedConversation.id][otherUserId]) < 2000
+  typingStatus[selectedConversation.id]?.[otherUserId] &&
+  typeof typingStatus[selectedConversation.id][otherUserId] === 'number' &&
+  (Date.now() - typingStatus[selectedConversation.id][otherUserId]) < 2000
 
   // MOBILE LAYOUT
   if (isMobile) {
