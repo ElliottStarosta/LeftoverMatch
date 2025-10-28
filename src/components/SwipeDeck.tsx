@@ -28,6 +28,8 @@ export default function SwipeDeck() {
   const [currentClaimId, setCurrentClaimId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [claiming, setClaiming] = useState(false)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+
 
   const x = useMotionValue(0)
   const y = useMotionValue(0)
@@ -178,6 +180,8 @@ export default function SwipeDeck() {
   useEffect(() => {
     const container = document.querySelector('.card-drag-container');
     if (!container || !currentPost) return;
+
+    if (showClaimModal || showDetailsModal) return;
   
     let isDragging = false;
     let startX = 0;
@@ -203,6 +207,7 @@ export default function SwipeDeck() {
       const deltaY = clientY - startY;
       
       console.log('👆 DRAGGING - deltaX:', deltaX);
+      console.log("Is show modal active? ",showClaimModal)
       
       x.set(deltaX);
       y.set(deltaY);
@@ -247,7 +252,7 @@ export default function SwipeDeck() {
       container.removeEventListener('touchmove', handlePointerMove as any);
       container.removeEventListener('touchend', handlePointerUp as any);
     };
-  }, [currentPost, claiming]);
+  }, [currentPost, claiming,showClaimModal, showClaimModal, showDetailsModal]);
 
   // ============================================
   // SWIPE HANDLERS
@@ -446,7 +451,8 @@ export default function SwipeDeck() {
             className="absolute inset-0 pointer-events-none"
           >
             <div className="pointer-events-auto h-full w-full">
-              <FoodCard post={currentPost} />
+              <FoodCard post={currentPost} 
+              onDetailsModalChange={setShowClaimModal}/>
             </div>
           </motion.div>
         )}

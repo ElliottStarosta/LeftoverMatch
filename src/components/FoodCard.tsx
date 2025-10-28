@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { MapPinIcon, ClockIcon, UserIcon, XMarkIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
 import { StarIcon } from '@heroicons/react/24/solid'
@@ -9,11 +9,17 @@ import { AlgorithmPost } from '@/lib/algorithm'
 
 interface FoodCardProps {
   post: AlgorithmPost
+  onDetailsModalChange?: (isOpen: boolean) => void
 }
 
-export default function FoodCard({ post }: FoodCardProps) {
+export default function FoodCard({ post, onDetailsModalChange }: FoodCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
+
+
+  useEffect(() => {
+    onDetailsModalChange?.(showDetails)
+  }, [showDetails, onDetailsModalChange])
 
   const getTrustStars = (score: number) => {
     const stars = []

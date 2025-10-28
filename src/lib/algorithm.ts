@@ -1,6 +1,20 @@
 import { getDb } from './firebase-utils'
 import { Post, User } from '@/types'
 
+
+async function deleteExpiredPost(postId: string) {
+  try {
+    const db = getDb()
+    if (!db) return
+    
+    const { doc, deleteDoc } = await import('firebase/firestore')
+    await deleteDoc(doc(db, 'posts', postId))
+    console.log(`🗑️ Deleted expired post: ${postId}`)
+  } catch (error) {
+    console.error(`❌ Error deleting expired post ${postId}:`, error)
+  }
+}
+
 function ensureClientSide() {
   if (typeof window === 'undefined') {
     throw new Error('This function can only be called on the client side')
@@ -376,6 +390,9 @@ function calculateScore(
     } else if (hoursUntilStart >= 2 && hoursUntilStart < 4) {
       timeScore = 2
     } else if (now > pickupEnd) {
+      deleteExpiredPost(post.id).catch(err => 
+        console.error('Failed to delete expired post:', err)
+      )
       return { score: 0, matchReasons: ['Pickup window expired'], compatibilityPercentage: 0 }
     } else {
       timeScore = 1
