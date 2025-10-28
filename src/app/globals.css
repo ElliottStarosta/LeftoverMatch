@@ -132,6 +132,39 @@ body {
   }
 }
 
+@media (max-width: 640px) {
+  /* Card buttons hidden on mobile */
+  .swipe-buttons {
+    display: none !important;
+  }
+
+  /* Smooth swipe animations */
+  [style*="transform"] {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Mobile notification overlay */
+  .notification-mobile-sheet {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* Haptic-like visual feedback */
+  .active\:scale-95:active {
+    transform: scale(0.95);
+  }
+}
+
 /* Touch-friendly tap targets */
 @media (hover: none) and (pointer: coarse) {
   button, a, input, textarea, select {
@@ -153,11 +186,6 @@ body {
 }
 
 /* Fix iOS Safari viewport height issues */
-@supports (-webkit-touch-callout: none) {
-  .h-screen {
-    height: -webkit-fill-available;
-  }
-}
 
 /* Prevent text selection on draggable cards */
 .card-drag-container * {

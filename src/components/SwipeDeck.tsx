@@ -11,6 +11,8 @@ import FoodCard from './FoodCard'
 import ClaimModal from './ClaimModal'
 import { useRouter } from 'next/navigation'
 import { useMotionValue, useTransform, PanInfo } from 'framer-motion'
+import {gsap} from 'gsap'
+
 
 
 export default function SwipeDeck() {
@@ -180,37 +182,34 @@ export default function SwipeDeck() {
   useEffect(() => {
     const container = document.querySelector('.card-drag-container');
     if (!container || !currentPost) return;
-
+  
     if (showClaimModal || showDetailsModal) return;
   
     let isDragging = false;
     let startX = 0;
     let startY = 0;
+    let dragTimeline: gsap.core.Timeline | null = null;
   
     const handlePointerDown = (e: PointerEvent | TouchEvent) => {
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       
-      console.log('👇 POINTER DOWN - Starting drag');
       isDragging = true;
       startX = clientX;
       startY = clientY;
+  
+      // Kill any existing animation
+      if (dragTimeline) dragTimeline.kill();
     };
   
     const handlePointerMove = (e: PointerEvent | TouchEvent) => {
       if (!isDragging) return;
       
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      
       const deltaX = clientX - startX;
-      const deltaY = clientY - startY;
-      
-      console.log('👆 DRAGGING - deltaX:', deltaX);
-      console.log("Is show modal active? ",showClaimModal)
       
       x.set(deltaX);
-      y.set(deltaY);
+      y.set(0);
     };
   
     const handlePointerUp = (e: PointerEvent | TouchEvent) => {
@@ -219,21 +218,35 @@ export default function SwipeDeck() {
       const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : e.clientX;
       const deltaX = clientX - startX;
       
-      console.log('🎯 DRAG END - deltaX:', deltaX);
       isDragging = false;
   
       const threshold = 100;
       if (Math.abs(deltaX) > threshold) {
-        console.log('✅ SWIPE DETECTED! Direction:', deltaX > 0 ? 'RIGHT' : 'LEFT');
+        // Smooth GSAP animation for swipe exit
+        dragTimeline = gsap.timeline();
+        dragTimeline.to([x, y], {
+          x: deltaX > 0 ? 500 : -500,
+          duration: 0.4,
+          ease: 'power2.inOut'
+        }, 0);
+        dragTimeline.to(x, {
+          duration: 0.3,
+          ease: 'power2.in'
+        }, 0);
+  
         if (deltaX > 0) {
           handleSwipeRight();
         } else {
           handleSwipeLeft();
         }
       } else {
-        console.log('❌ NOT ENOUGH DISTANCE - Resetting');
-        x.set(0);
-        y.set(0);
+        // Snap back animation
+        dragTimeline = gsap.timeline();
+        dragTimeline.to([x, y], {
+          x: 0,
+          duration: 0.3,
+          ease: 'elastic.out(1, 0.5)'
+        }, 0);
       }
     };
   
@@ -245,6 +258,7 @@ export default function SwipeDeck() {
     container.addEventListener('touchend', handlePointerUp as any);
   
     return () => {
+      if (dragTimeline) dragTimeline.kill();
       container.removeEventListener('mousedown', handlePointerDown as any);
       container.removeEventListener('mousemove', handlePointerMove as any);
       container.removeEventListener('mouseup', handlePointerUp as any);
@@ -252,8 +266,7 @@ export default function SwipeDeck() {
       container.removeEventListener('touchmove', handlePointerMove as any);
       container.removeEventListener('touchend', handlePointerUp as any);
     };
-  }, [currentPost, claiming,showClaimModal, showClaimModal, showDetailsModal]);
-
+  }, [currentPost, claiming, showClaimModal, showDetailsModal]);
   // ============================================
   // SWIPE HANDLERS
   // ============================================
@@ -356,22 +369,81 @@ export default function SwipeDeck() {
   // KEYBOARD NAVIGATION
   // ============================================
   useEffect(() => {
-    const handleKeyPress = (event: KeyboardEvent) => {
-      if (showClaimModal) return
-
-      switch (event.key) {
-        case 'ArrowLeft':
-          handleSwipeLeft()
-          break
-        case 'ArrowRight':
-          handleSwipeRight()
-          break
+    const container = document.querySelector('.card-drag-container');
+    if (!container || !currentPost) return;
+  
+    if (showClaimModal || showDetailsModal) return;
+  
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+  
+    const handlePointerDown = (e: PointerEvent | TouchEvent) => {
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      
+      console.log('👇 POINTER DOWN - Starting drag');
+      isDragging = true;
+      startX = clientX;
+      startY = clientY;
+    };
+  
+    const handlePointerMove = (e: PointerEvent | TouchEvent) => {
+      if (!isDragging) return;
+      
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      
+      const deltaX = clientX - startX;
+      const deltaY = clientY - startY;
+      
+      // Only allow horizontal movement - constrain to X axis only
+      console.log('👆 DRAGGING - deltaX:', deltaX);
+      
+      x.set(deltaX);
+      y.set(0); // Keep Y at 0 - no vertical movement
+    };
+  
+    const handlePointerUp = (e: PointerEvent | TouchEvent) => {
+      if (!isDragging) return;
+      
+      const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : e.clientX;
+      const deltaX = clientX - startX;
+      
+      console.log('🎯 DRAG END - deltaX:', deltaX);
+      isDragging = false;
+  
+      const threshold = 100;
+      if (Math.abs(deltaX) > threshold) {
+        console.log('✅ SWIPE DETECTED! Direction:', deltaX > 0 ? 'RIGHT' : 'LEFT');
+        if (deltaX > 0) {
+          handleSwipeRight();
+        } else {
+          handleSwipeLeft();
+        }
+      } else {
+        console.log('❌ NOT ENOUGH DISTANCE - Resetting');
+        x.set(0);
+        y.set(0);
       }
-    }
-
-    window.addEventListener('keydown', handleKeyPress)
-    return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [currentPost, showClaimModal, claiming])
+    };
+  
+    container.addEventListener('mousedown', handlePointerDown as any);
+    container.addEventListener('mousemove', handlePointerMove as any);
+    container.addEventListener('mouseup', handlePointerUp as any);
+    container.addEventListener('touchstart', handlePointerDown as any);
+    container.addEventListener('touchmove', handlePointerMove as any);
+    container.addEventListener('touchend', handlePointerUp as any);
+  
+    return () => {
+      container.removeEventListener('mousedown', handlePointerDown as any);
+      container.removeEventListener('mousemove', handlePointerMove as any);
+      container.removeEventListener('mouseup', handlePointerUp as any);
+      container.removeEventListener('touchstart', handlePointerDown as any);
+      container.removeEventListener('touchmove', handlePointerMove as any);
+      container.removeEventListener('touchend', handlePointerUp as any);
+    };
+  }, [currentPost, claiming, showClaimModal, showDetailsModal]);
 
   // ============================================
   // LOADING STATE
@@ -430,9 +502,9 @@ export default function SwipeDeck() {
   // RENDER CARDS
   // ============================================
   return (
-    <div className="relative h-full flex flex-col">
+    <div className="relative h-full flex flex-col swipe-deck">
       {/* Card Stack */}
-      <div className="relative flex-1 min-h-0 card-drag-container"   style={{ touchAction: 'none' }}>
+      <div className="relative flex-1 min-h-0 card-drag-container" style={{ touchAction: 'none' }}>
         {currentPost && (
           <motion.div
             key={currentPost.id}
@@ -452,7 +524,7 @@ export default function SwipeDeck() {
           >
             <div className="pointer-events-auto h-full w-full">
               <FoodCard post={currentPost} 
-              onDetailsModalChange={setShowClaimModal}/>
+              onDetailsModalChange={setShowDetailsModal}/>
             </div>
           </motion.div>
         )}
@@ -466,40 +538,6 @@ export default function SwipeDeck() {
             </div>
           </div>
         )}
-  
-      </div>
-  
-      {/* Action Buttons */}
-      <div className="flex gap-16 justify-center mt-4">
-        {/* Swipe Left (Reject) */}
-        <button
-          onClick={handleSwipeLeft}
-          disabled={claiming || !currentPost}
-          className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center
-                     hover:bg-red-200 hover:scale-125 active:scale-90 transition-all duration-300
-                     shadow-[0_4px_12px_rgba(255,0,0,0.3)] hover:shadow-[0_6px_20px_rgba(255,0,0,0.4)]
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label="Skip this food"
-        >
-          <XMarkIcon className="w-8 h-8" />
-        </button>
-  
-        {/* Swipe Right (Like/Claim) */}
-        <button
-          onClick={handleSwipeRight}
-          disabled={claiming || !currentPost}
-          className="w-16 h-16 bg-green-500 text-white rounded-full flex items-center justify-center
-                     hover:bg-green-600 hover:scale-125 active:scale-90 transition-all duration-300
-                     shadow-[0_4px_12px_rgba(0,255,100,0.3)] hover:shadow-[0_6px_20px_rgba(0,255,100,0.4)]
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label="Claim this food"
-        >
-          {claiming ? (
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-          ) : (
-            <HeartSolidIcon className="w-8 h-8" />
-          )}
-        </button>
       </div>
   
       {/* Claim Modal */}
