@@ -585,6 +585,14 @@ export default function MessagesContent() {
   const handleBackToList = () => {
     setShowChatView(false)
     setSelectedConversation(null)
+    setMessages([])
+    
+    // Check if we came from a URL parameter
+    const conversationId = searchParams.get('conversation')
+    if (conversationId) {
+      // We have a conversation ID, so navigate to plain /messages
+      router.push('/messages')
+    }
   }
 
   if (authLoading || loading) {
@@ -788,14 +796,15 @@ export default function MessagesContent() {
     }
 
     // Show conversations list
-   
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-pink-50 flex flex-col">
         {/* Header */}
         <div className="conversations-header bg-gradient-to-r from-orange-500 via-pink-500 to-rose-500 px-4 py-4 sticky top-0 z-10 shadow-lg">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => router.push('/')}
+              onClick={() => {
+                router.push('/')
+              } }
               className="p-2 -ml-2 hover:bg-white/20 rounded-full transition-colors transform hover:scale-110 active:scale-95"
             >
               <ChevronLeftIcon className="w-6 h-6 text-white" />

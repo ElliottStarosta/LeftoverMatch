@@ -191,7 +191,6 @@ export default function ClaimModal({ post, onClose, claimId, currentUserId }: Cl
           duration: 0.2,
           onComplete: () => {
             onClose()
-            router.push(`/messages?conversation=${conversationRef.id}`)
           }
         }, '-=0.1')
       }

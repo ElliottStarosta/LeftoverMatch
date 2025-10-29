@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid'
 import { useAuth } from '@/lib/useAuth'
 import { getPersonalizedFeed, AlgorithmPost } from '@/lib/algorithm'
 import { createClaim, isPostAvailable } from '@/lib/claims'
@@ -12,6 +11,8 @@ import ClaimModal from './ClaimModal'
 import { useRouter } from 'next/navigation'
 import { useMotionValue, useTransform, PanInfo } from 'framer-motion'
 import { gsap } from 'gsap'
+import { checkDailyClaimLimit, incrementDailyClaimCount } from '@/lib/dailyLimit'
+
 
 
 
@@ -310,41 +311,60 @@ export default function SwipeDeck() {
     console.log('➡️ Swiping right on:', currentPost.title)
     setClaiming(true)
     setSwipeDirection('right')
+    setCurrentIndex(prev => prev + 1)
 
-    // Heart animation
-    const heart = document.createElement('div')
-    heart.innerHTML = '❤️'
-    heart.style.cssText = `
+
+    // ✅ CHECK DAILY CLAIM LIMIT FIRST
+    try {
+      const { canClaim, claimsToday, maxClaims, resetTime } = await checkDailyClaimLimit(user.uid)
+
+      if (!canClaim) {
+        const resetTimeStr = resetTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        alert(`🚫 You've reached your daily limit of ${maxClaims} claims!\n\nCome back tomorrow at ${resetTimeStr}.`)
+        setClaiming(false)
+        setSwipeDirection(null)
+        x.set(0)
+        y.set(0)
+        return
+      }
+
+      console.log(`✅ Daily limit check passed: ${claimsToday}/${maxClaims} claims today`)
+    } catch (error) {
+      console.error('Error checking claim limit:', error)
+      alert('Error checking claim limit. Please try again.')
+      setClaiming(false)
+      setSwipeDirection(null)
+      return
+    }
+
+    // Create floating hearts animation
+    const createFloatingHeart = () => {
+      const heart = document.createElement('div')
+      heart.innerHTML = '❤️'
+      heart.style.cssText = `
       position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 120px;
+      font-size: ${Math.random() * 40 + 30}px;
       z-index: 9999;
       pointer-events: none;
+      left: ${Math.random() * window.innerWidth}px;
+      top: ${window.innerHeight + 50}px;
     `
-    document.body.appendChild(heart)
+      document.body.appendChild(heart)
 
-    gsap.fromTo(heart,
-      { scale: 0, opacity: 0, rotation: -20 },
-      {
-        scale: 1.2,
-        opacity: 1,
-        rotation: 0,
-        duration: 0.4,
-        ease: 'back.out(2)',
-        onComplete: () => {
-          gsap.to(heart, {
-            scale: 0,
-            opacity: 0,
-            y: -50,
-            duration: 0.3,
-            ease: 'power2.in',
-            onComplete: () => heart.remove()
-          })
-        }
-      }
-    )
+      gsap.to(heart, {
+        y: -window.innerHeight - 100,
+        opacity: 0,
+        rotation: Math.random() * 360,
+        duration: Math.random() * 1 + 2,
+        ease: 'power1.inOut',
+        onComplete: () => heart.remove()
+      })
+    }
+
+    // Burst of hearts
+    for (let i = 0; i < 8; i++) {
+      setTimeout(() => createFloatingHeart(), i * 100)
+    }
 
     try {
       console.log('🔍 Checking availability...')
@@ -355,7 +375,7 @@ export default function SwipeDeck() {
           const updated = [...prev, currentPost.id]
           return updated.slice(-100)
         })
-        setCurrentIndex(prev => prev + 1)
+        
         setSwipeDirection(null)
         setClaiming(false)
 
@@ -365,6 +385,14 @@ export default function SwipeDeck() {
       console.log('🔒 Creating claim...')
       const claimId = await createClaim(user.uid, currentPost.id, currentPost.userId)
       console.log('✅ Claim created:', claimId)
+
+      // ✅ INCREMENT DAILY CLAIM COUNT
+      try {
+        await incrementDailyClaimCount(user.uid)
+        console.log('✅ Daily claim count incremented')
+      } catch (error) {
+        console.error('Error updating daily claim count:', error)
+      }
 
       setExcludedPostIds(prev => {
         const updated = [...prev, currentPost.id]
@@ -400,7 +428,8 @@ export default function SwipeDeck() {
     setSelectedPost(null)
 
     // Move to next card
-    setCurrentIndex(prev => prev + 1)
+    x.set(0)
+    y.set(0)
   }
 
   // ============================================
