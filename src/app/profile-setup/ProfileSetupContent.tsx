@@ -720,7 +720,7 @@ export default function ProfileSetupPage() {
                                                     onClick={() => toggleOption('allergies', allergy.value)}
                                                     className={`p-4 rounded-2xl border-2 transition-all duration-300 transform hover:scale-105 ${formData.allergies.includes(allergy.value)
                                                         ? 'bg-gradient-to-br from-red-500 to-orange-500 border-red-500 text-white shadow-lg'
-                                                        : 'bg-white border-gray-200 text-gray-700 hover:border-red-300'
+                                                        : 'bg-white border-orange-200 hover:border-orange-300 text-orange-500'
                                                         }`}
                                                 >
                                                     <div className="text-3xl mb-2">{allergy.emoji}</div>

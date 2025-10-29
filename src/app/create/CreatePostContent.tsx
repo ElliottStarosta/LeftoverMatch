@@ -601,10 +601,10 @@ export default function CreatePostPage() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-pink-50 flex flex-col">
       {/* Header */}
       <div className="sticky top-0 z-50 bg-white border-b border-orange-200 flex items-center justify-between h-14 px-4">
-        <button 
+        <button
           type="button"
           onClick={() => router.push('/')}
-          className="p-2 -ml-2 text-orange-600 active:bg-orange-100 rounded-lg"
+          className="p-2 -ml-2 text-orange-600 active:bg-orange-100 rounded-lg transition-colors"
         >
           <ChevronLeftIcon className="w-6 h-6" />
         </button>
@@ -613,7 +613,7 @@ export default function CreatePostPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto pb-24">
+      <div className="flex-1 overflow-y-auto pb-4">
         <form onSubmit={handleSubmit} className="space-y-3 p-3 max-w-2xl mx-auto">
           {error && (
             <div className="bg-red-50 border border-red-300 px-4 py-3 rounded-lg">
@@ -723,7 +723,7 @@ export default function CreatePostPage() {
                       key={allergen.value} 
                       type="button" 
                       onClick={() => toggleAllergen(allergen.value)} 
-                      className={`p-4 rounded-xl border-2 transition-all text-center active:scale-95 transform hover:scale-105 $${formData.allergens.includes(allergen.value) 
+                      className={`p-4 rounded-xl border-2 transition-all text-center active:scale-95 transform hover:scale-105 ${formData.allergens.includes(allergen.value) 
                         ? 'bg-gradient-to-br from-red-500 to-orange-500 border-red-500 text-white shadow-lg' 
                         : 'bg-white border-orange-200 hover:border-orange-300 text-orange-500'}
                       `}
@@ -768,7 +768,7 @@ export default function CreatePostPage() {
                     type="text" 
                     value={formData.location} 
                     onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))} 
-                    className="flex-1 px-3 py-2 border border-orange-200 rounded text-sm bg-white focus:border-orange-500 focus:outline-none transition-colors" 
+                    className="flex-1 px-3 py-2 border border-orange-200 rounded text-sm bg-white focus:border-orange-500 focus:outline-none transition-colors text-gray-900 " 
                     placeholder="Enter address" 
                     required 
                   />

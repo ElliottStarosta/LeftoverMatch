@@ -93,6 +93,77 @@ export default function MessagesContent() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
+  useEffect(() => {
+    // Animate header
+    gsap.fromTo('.conversations-header',
+      { opacity: 0, y: -30 },
+      { opacity: 1, y: 0, duration: 0.5, ease: 'back.out(1.7)' }
+    )
+
+    // Animate conversation cards
+    gsap.fromTo('.conversation-card',
+      { opacity: 0, x: -30, scale: 0.9 },
+      { opacity: 1, x: 0, scale: 1, duration: 0.4, stagger: 0.08, ease: 'back.out(1.7)' }
+    )
+  }, [conversations.length])
+
+  useEffect(() => {
+    if (!selectedConversation) return
+  
+    const db = getDb()
+    if (!db) return
+  
+    import('firebase/firestore').then(({ doc, onSnapshot }) => {
+      const conversationRef = doc(db, 'conversations', selectedConversation.id)
+  
+      const unsubscribe = onSnapshot(conversationRef, (snapshot) => {
+        if (!snapshot.exists()) {
+          // Conversation was deleted, redirect to home
+          console.log('Conversation deleted, redirecting to home')
+          router.push('/')
+        }
+      })
+  
+      return () => unsubscribe()
+    })
+  }, [selectedConversation, router])
+
+
+  useEffect(() => {
+    if (!isMobile) return;
+    if (showChatView && selectedConversation) {
+      // Animate chat header
+      gsap.fromTo('.chat-header',
+        { opacity: 0, y: -30 },
+        { opacity: 1, y: 0, duration: 0.5, ease: 'back.out(1.7)' }
+      )
+
+      // Animate messages
+      gsap.fromTo('.message-bubble',
+        { opacity: 0, x: (i) => i % 2 === 0 ? -30 : 30, scale: 0.8 },
+        { opacity: 1, x: 0, scale: 1, duration: 0.4, stagger: 0.05, ease: 'back.out(1.7)' }
+      )
+
+      // Animate input
+      gsap.fromTo('.message-input-container',
+        { opacity: 0, y: 30 },
+        { opacity: 1, y: 0, duration: 0.5, delay: 0.2, ease: 'back.out(1.7)' }
+      )
+    } else if (isMobile && !showChatView) {
+      // Animate header
+      gsap.fromTo('.conversations-header',
+        { opacity: 0, y: -30 },
+        { opacity: 1, y: 0, duration: 0.5, ease: 'back.out(1.7)' }
+      )
+
+      // Animate conversation cards
+      gsap.fromTo('.conversation-card',
+        { opacity: 0, x: -30, scale: 0.9 },
+        { opacity: 1, x: 0, scale: 1, duration: 0.4, stagger: 0.08, ease: 'back.out(1.7)' }
+      )
+    }
+  }, [showChatView, selectedConversation, isMobile])
+
   // Entrance animation
   useEffect(() => {
     if (!containerRef.current) return
@@ -542,20 +613,22 @@ export default function MessagesContent() {
   (Date.now() - typingStatus[selectedConversation.id][otherUserId]) < 2000
 
   // MOBILE LAYOUT
+
   if (isMobile) {
     // Show chat view
     if (showChatView && selectedConversation) {
+
       return (
-        <div className="h-screen bg-white flex flex-col">
+        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-pink-50 flex flex-col">
           {/* Chat Header */}
-          <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
+          <div className="chat-header bg-gradient-to-r from-orange-500 via-pink-500 to-rose-500 px-4 py-4 flex items-center gap-3 sticky top-0 z-10 shadow-lg">
             <button
               onClick={handleBackToList}
-              className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 -ml-2 hover:bg-white/20 rounded-full transition-colors transform hover:scale-110 active:scale-95"
             >
-              <ChevronLeftIcon className="w-6 h-6 text-gray-900" />
+              <ChevronLeftIcon className="w-6 h-6 text-white" />
             </button>
-            <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+            <div className="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-white shadow-lg transform hover:scale-110 transition-transform">
               {otherUser?.photoURL ? (
                 <Image
                   src={otherUser.photoURL}
@@ -564,30 +637,32 @@ export default function MessagesContent() {
                   className="object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center">
-                  <UserIcon className="w-5 h-5 text-white" />
+                <div className="w-full h-full bg-white flex items-center justify-center">
+                  <UserIcon className="w-6 h-6 text-orange-500" />
                 </div>
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900 truncate">{otherUser?.name || 'Anonymous'}</h3>
-              <p className="text-xs text-gray-500 truncate">{selectedConversation.postTitle}</p>
+              <h3 className="font-bold text-white truncate">{otherUser?.name || 'Anonymous'}</h3>
+              <p className="text-xs text-white/80 truncate">{selectedConversation.postTitle}</p>
             </div>
             {isClaimAccepted && (
-              <CheckCircleIcon className="w-6 h-6 text-green-500 flex-shrink-0" />
+              <div className="bg-green-400/90 rounded-full p-2 animate-pulse">
+                <CheckCircleIcon className="w-5 h-5 text-white" />
+              </div>
             )}
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2 bg-white">
-            {messages.map((msg) => {
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-gradient-to-br from-orange-50/50 to-pink-50/50">
+            {messages.map((msg, idx) => {
               const isOwn = msg.senderId === authUser.uid
               const isSystem = msg.type === 'system'
 
               if (isSystem) {
                 return (
                   <div key={msg.id} className="flex justify-center py-2">
-                    <div className="bg-gray-100 px-3 py-1.5 rounded-full text-xs text-gray-600 max-w-[80%] text-center">
+                    <div className="message-bubble bg-blue-100 px-4 py-2 rounded-full text-xs text-blue-700 font-semibold max-w-[85%] text-center shadow-sm">
                       {msg.text}
                     </div>
                   </div>
@@ -597,13 +672,17 @@ export default function MessagesContent() {
               return (
                 <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className={`max-w-[75%] px-3 py-2 rounded-2xl ${
+                    className={`message-bubble max-w-[80%] px-4 py-3 rounded-2xl shadow-md transition-all transform hover:scale-105 ${
                       isOwn
-                        ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-br-md'
-                        : 'bg-gray-100 text-gray-900 rounded-bl-md'
+                        ? 'bg-gradient-to-br from-green-500 to-emerald-500 text-white rounded-br-none'
+                        : 'bg-white text-gray-900 rounded-bl-none border border-orange-100'
                     }`}
+                    
                   >
                     <p className="text-sm break-words">{msg.text}</p>
+                    <p className={`text-xs mt-1 ${isOwn ? 'text-white/70' : 'text-gray-500'}`}>
+                      {msg.createdAt?.toDate?.()?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || ''}
+                    </p>
                   </div>
                 </div>
               )
@@ -611,7 +690,7 @@ export default function MessagesContent() {
 
             {isOtherUserTyping && (
               <div className="flex justify-start">
-                <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-bl-md">
+                <div className="message-bubble bg-white px-4 py-3 rounded-2xl rounded-bl-none shadow-md border border-orange-100">
                   <div className="flex gap-1">
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
@@ -626,11 +705,11 @@ export default function MessagesContent() {
 
           {/* Accept Claim Button */}
           {isPoster && !isClaimAccepted && (
-            <div className="px-4 py-3 bg-green-50 border-t border-green-200">
+            <div className="action-button px-4 py-3 bg-gradient-to-r from-green-100 to-emerald-100 border-t-2 border-green-300">
               <button
                 onClick={handleAcceptClaim}
                 disabled={accepting}
-                className="accept-button w-full bg-green-500 text-white py-3 px-4 rounded-xl font-semibold active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 transition-transform"
+                className="accept-button w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 px-4 rounded-2xl font-bold active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 transition-transform shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 {accepting ? (
                   <>
@@ -649,17 +728,17 @@ export default function MessagesContent() {
 
           {/* Get Directions & Complete */}
           {!isPoster && isClaimAccepted && selectedConversation.postLocation && (
-            <div className="px-4 py-3 bg-blue-50 border-t border-blue-200 space-y-2">
+            <div className="action-button px-4 py-3 bg-gradient-to-r from-blue-100 to-cyan-100 border-t-2 border-blue-300 space-y-2">
               <button
                 onClick={handleGetDirections}
-                className="w-full bg-blue-500 text-white py-3 px-4 rounded-xl font-semibold active:scale-95 flex items-center justify-center gap-2 transition-transform"
+                className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 px-4 rounded-2xl font-bold active:scale-95 flex items-center justify-center gap-2 transition-transform shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 <MapPinIcon className="w-5 h-5" />
                 Get Directions
               </button>
               <button
                 onClick={handleCompletePickup}
-                className="w-full bg-green-500 text-white py-3 px-4 rounded-xl font-semibold active:scale-95 flex items-center justify-center gap-2 transition-transform"
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 px-4 rounded-2xl font-bold active:scale-95 flex items-center justify-center gap-2 transition-transform shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 <CheckIcon className="w-5 h-5" />
                 Complete Pickup
@@ -668,7 +747,7 @@ export default function MessagesContent() {
           )}
 
           {/* Message Input */}
-          <form onSubmit={handleSendMessage} className="px-4 py-3 bg-white border-t border-gray-200">
+          <form onSubmit={handleSendMessage} className="message-input-container px-4 py-3 bg-white border-t-2 border-orange-200 shadow-lg">
             <div className="flex gap-2 items-center">
               <input
                 type="text"
@@ -678,13 +757,13 @@ export default function MessagesContent() {
                   handleTyping()
                 }}
                 placeholder="Message..."
-                className="message-input flex-1 px-4 py-2.5 bg-gray-100 rounded-full focus:outline-none text-sm text-gray-900 placeholder-gray-500"
+                className="message-input flex-1 px-4 py-3 bg-gradient-to-br from-orange-50 to-amber-50 rounded-full focus:outline-none text-base text-gray-900 placeholder-gray-500 border border-orange-200 focus:border-orange-500 transition-all"                
                 disabled={sending}
               />
               <button
                 type="submit"
                 disabled={!newMessage.trim() || sending}
-                className="bg-gradient-to-r from-orange-500 to-pink-500 text-white p-2.5 rounded-full disabled:opacity-50 active:scale-95 transition-transform flex-shrink-0"
+                className="bg-gradient-to-r from-green-500 to-emerald-500 text-white p-3 rounded-full disabled:opacity-50 active:scale-90 transition-all flex-shrink-0 shadow-lg hover:shadow-xl transform hover:scale-110"
               >
                 <PaperAirplaneIcon className="w-5 h-5" />
               </button>
@@ -709,32 +788,33 @@ export default function MessagesContent() {
     }
 
     // Show conversations list
+   
     return (
-      <div className="h-screen bg-white flex flex-col">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-pink-50 flex flex-col">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10">
+        <div className="conversations-header bg-gradient-to-r from-orange-500 via-pink-500 to-rose-500 px-4 py-4 sticky top-0 z-10 shadow-lg">
           <div className="flex items-center justify-between">
             <button
               onClick={() => router.push('/')}
-              className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 -ml-2 hover:bg-white/20 rounded-full transition-colors transform hover:scale-110 active:scale-95"
             >
-              <ArrowLeftIcon className="w-6 h-6 text-gray-900" />
+              <ChevronLeftIcon className="w-6 h-6 text-white" />
             </button>
-            <h1 className="text-xl font-bold text-gray-900">Messages</h1>
+            <h1 className="text-2xl font-bold text-white">Messages</h1>
             <div className="w-10"></div>
           </div>
         </div>
 
         {/* Conversations List */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto px-3 py-4">
           {conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full px-4">
-              <HeartIcon className="w-16 h-16 text-gray-300 mb-4" />
-              <p className="text-gray-600 text-center mb-1">No messages yet</p>
-              <p className="text-sm text-gray-400 text-center">Start swiping to connect!</p>
+              <div className="text-6xl mb-4 opacity-50 animate-bounce">💬</div>
+              <p className="text-gray-700 text-center font-semibold mb-1">No messages yet</p>
+              <p className="text-sm text-gray-500 text-center">Start swiping to connect!</p>
             </div>
           ) : (
-            <div ref={listRef}>
+            <div ref={listRef} className="space-y-2">
               {conversations.map((convo) => {
                 const other = convo.participants.find(id => id !== authUser.uid)
                 const otherData = other ? userData[other] : null
@@ -743,31 +823,35 @@ export default function MessagesContent() {
                   <button
                     key={convo.id}
                     onClick={() => handleSelectConversation(convo)}
-                    className="w-full px-4 py-3 flex gap-3 items-center hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-100"
+                    className="conversation-card w-full p-4 rounded-2xl bg-white border-2 border-orange-100 hover:border-orange-300 active:bg-orange-50 transition-all shadow-md hover:shadow-lg transform hover:scale-[1.02] active:scale-95"
                   >
-                    <div className="relative w-14 h-14 rounded-full overflow-hidden flex-shrink-0">
-                      <Image
-                        src={convo.postPhoto}
-                        alt={convo.postTitle}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="flex-1 text-left min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-semibold text-gray-900 truncate text-sm">
+                    <div className="flex gap-3 items-center">
+                      <div className="relative w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-orange-200 shadow-md transform hover:scale-110 transition-transform">
+                        <Image
+                          src={convo.postPhoto}
+                          alt={convo.postTitle}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="font-bold text-gray-900 truncate text-sm">
+                            {convo.postTitle}
+                          </h3>
+                          {convo.claimAccepted && (
+                            <CheckCircleIcon className="w-5 h-5 text-green-500 flex-shrink-0 ml-2 animate-pulse" />
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-600 truncate mb-1 font-medium">
                           {otherData?.name || 'Anonymous'}
-                        </h3>
-                        {convo.claimAccepted && (
-                          <CheckCircleIcon className="w-5 h-5 text-green-500 flex-shrink-0 ml-2" />
+                        </p>
+                        {convo.lastMessage && (
+                          <p className="text-xs text-gray-500 truncate">
+                            {convo.lastMessage}
+                          </p>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 truncate mb-0.5">{convo.postTitle}</p>
-                      {convo.lastMessage && (
-                        <p className="text-xs text-gray-400 truncate">
-                          {convo.lastMessage}
-                        </p>
-                      )}
                     </div>
                   </button>
                 )

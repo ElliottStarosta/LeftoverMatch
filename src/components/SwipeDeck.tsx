@@ -11,7 +11,7 @@ import FoodCard from './FoodCard'
 import ClaimModal from './ClaimModal'
 import { useRouter } from 'next/navigation'
 import { useMotionValue, useTransform, PanInfo } from 'framer-motion'
-import {gsap} from 'gsap'
+import { gsap } from 'gsap'
 
 
 
@@ -56,20 +56,22 @@ export default function SwipeDeck() {
     const cleanup = async () => {
       const { checkAndDeleteExpiredPosts } = await import('@/lib/cleanup')
       const deleted = await checkAndDeleteExpiredPosts();
-      
+
       if (deleted !== undefined && deleted > 0) {
         console.log(`🗑️ Cleaned up ${deleted} expired posts`)
       }
     }
-    
+
     cleanup()
-    
+
     // Run cleanup every 5 minutes
     const interval = setInterval(cleanup, 5 * 60 * 1000)
     return () => clearInterval(interval)
   }, [])
 
- 
+
+
+
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -121,6 +123,8 @@ export default function SwipeDeck() {
       localStorage.setItem('excludedPostIds', JSON.stringify(excludedPostIds))
     }
   }, [excludedPostIds])
+
+
 
   // ============================================
   // INFINITE SCROLL - Load more when near end
@@ -182,44 +186,44 @@ export default function SwipeDeck() {
   useEffect(() => {
     const container = document.querySelector('.card-drag-container');
     if (!container || !currentPost) return;
-  
+
     if (showClaimModal || showDetailsModal) return;
-  
+
     let isDragging = false;
     let startX = 0;
     let startY = 0;
     let dragTimeline: gsap.core.Timeline | null = null;
-  
+
     const handlePointerDown = (e: PointerEvent | TouchEvent) => {
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      
+
       isDragging = true;
       startX = clientX;
       startY = clientY;
-  
+
       // Kill any existing animation
       if (dragTimeline) dragTimeline.kill();
     };
-  
+
     const handlePointerMove = (e: PointerEvent | TouchEvent) => {
       if (!isDragging) return;
-      
+
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const deltaX = clientX - startX;
-      
+
       x.set(deltaX);
       y.set(0);
     };
-  
+
     const handlePointerUp = (e: PointerEvent | TouchEvent) => {
       if (!isDragging) return;
-      
+
       const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : e.clientX;
       const deltaX = clientX - startX;
-      
+
       isDragging = false;
-  
+
       const threshold = 100;
       if (Math.abs(deltaX) > threshold) {
         // Smooth GSAP animation for swipe exit
@@ -233,7 +237,7 @@ export default function SwipeDeck() {
           duration: 0.3,
           ease: 'power2.in'
         }, 0);
-  
+
         if (deltaX > 0) {
           handleSwipeRight();
         } else {
@@ -249,14 +253,14 @@ export default function SwipeDeck() {
         }, 0);
       }
     };
-  
+
     container.addEventListener('mousedown', handlePointerDown as any);
     container.addEventListener('mousemove', handlePointerMove as any);
     container.addEventListener('mouseup', handlePointerUp as any);
     container.addEventListener('touchstart', handlePointerDown as any);
     container.addEventListener('touchmove', handlePointerMove as any);
     container.addEventListener('touchend', handlePointerUp as any);
-  
+
     return () => {
       if (dragTimeline) dragTimeline.kill();
       container.removeEventListener('mousedown', handlePointerDown as any);
@@ -307,6 +311,41 @@ export default function SwipeDeck() {
     setClaiming(true)
     setSwipeDirection('right')
 
+    // Heart animation
+    const heart = document.createElement('div')
+    heart.innerHTML = '❤️'
+    heart.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 120px;
+      z-index: 9999;
+      pointer-events: none;
+    `
+    document.body.appendChild(heart)
+
+    gsap.fromTo(heart,
+      { scale: 0, opacity: 0, rotation: -20 },
+      {
+        scale: 1.2,
+        opacity: 1,
+        rotation: 0,
+        duration: 0.4,
+        ease: 'back.out(2)',
+        onComplete: () => {
+          gsap.to(heart, {
+            scale: 0,
+            opacity: 0,
+            y: -50,
+            duration: 0.3,
+            ease: 'power2.in',
+            onComplete: () => heart.remove()
+          })
+        }
+      }
+    )
+
     try {
       console.log('🔍 Checking availability...')
       const isAvailable = await isPostAvailable(currentPost.id)
@@ -327,7 +366,6 @@ export default function SwipeDeck() {
       const claimId = await createClaim(user.uid, currentPost.id, currentPost.userId)
       console.log('✅ Claim created:', claimId)
 
-      // Add to excluded posts
       setExcludedPostIds(prev => {
         const updated = [...prev, currentPost.id]
         return updated.slice(-100)
@@ -371,48 +409,48 @@ export default function SwipeDeck() {
   useEffect(() => {
     const container = document.querySelector('.card-drag-container');
     if (!container || !currentPost) return;
-  
+
     if (showClaimModal || showDetailsModal) return;
-  
+
     let isDragging = false;
     let startX = 0;
     let startY = 0;
-  
+
     const handlePointerDown = (e: PointerEvent | TouchEvent) => {
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      
+
       console.log('👇 POINTER DOWN - Starting drag');
       isDragging = true;
       startX = clientX;
       startY = clientY;
     };
-  
+
     const handlePointerMove = (e: PointerEvent | TouchEvent) => {
       if (!isDragging) return;
-      
+
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      
+
       const deltaX = clientX - startX;
       const deltaY = clientY - startY;
-      
+
       // Only allow horizontal movement - constrain to X axis only
       console.log('👆 DRAGGING - deltaX:', deltaX);
-      
+
       x.set(deltaX);
       y.set(0); // Keep Y at 0 - no vertical movement
     };
-  
+
     const handlePointerUp = (e: PointerEvent | TouchEvent) => {
       if (!isDragging) return;
-      
+
       const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : e.clientX;
       const deltaX = clientX - startX;
-      
+
       console.log('🎯 DRAG END - deltaX:', deltaX);
       isDragging = false;
-  
+
       const threshold = 100;
       if (Math.abs(deltaX) > threshold) {
         console.log('✅ SWIPE DETECTED! Direction:', deltaX > 0 ? 'RIGHT' : 'LEFT');
@@ -427,14 +465,14 @@ export default function SwipeDeck() {
         y.set(0);
       }
     };
-  
+
     container.addEventListener('mousedown', handlePointerDown as any);
     container.addEventListener('mousemove', handlePointerMove as any);
     container.addEventListener('mouseup', handlePointerUp as any);
     container.addEventListener('touchstart', handlePointerDown as any);
     container.addEventListener('touchmove', handlePointerMove as any);
     container.addEventListener('touchend', handlePointerUp as any);
-  
+
     return () => {
       container.removeEventListener('mousedown', handlePointerDown as any);
       container.removeEventListener('mousemove', handlePointerMove as any);
@@ -523,12 +561,12 @@ export default function SwipeDeck() {
             className="absolute inset-0 pointer-events-none"
           >
             <div className="pointer-events-auto h-full w-full">
-              <FoodCard post={currentPost} 
-              onDetailsModalChange={setShowDetailsModal}/>
+              <FoodCard post={currentPost}
+                onDetailsModalChange={setShowDetailsModal} />
             </div>
           </motion.div>
         )}
-  
+
         {/* Loading More Indicator */}
         {loadingMore && (
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg z-10 pointer-events-none">
@@ -539,7 +577,7 @@ export default function SwipeDeck() {
           </div>
         )}
       </div>
-  
+
       {/* Claim Modal */}
       {showClaimModal && selectedPost && user && currentClaimId && (
         <ClaimModal

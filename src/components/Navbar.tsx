@@ -220,7 +220,7 @@ export default function Navbar() {
                 <span className="text-white font-bold text-xl">🍽️</span>
               </div>
               <span className="font-bold text-xl bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
-                LeftoverMatch
+              ReSwipe
               </span>
             </Link>
 

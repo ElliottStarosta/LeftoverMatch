@@ -14,6 +14,7 @@ import {
   CheckIcon,
   XMarkIcon,
   ArrowRightOnRectangleIcon,
+  ChevronLeftIcon,
   TrashIcon
 } from '@heroicons/react/24/outline'
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
@@ -346,7 +347,7 @@ export default function ProfileContent() {
           onClick={() => router.push('/')}
           className="mb-6 flex items-center gap-2 text-gray-600 hover:text-orange-600 transition-colors transform hover:scale-105 active:scale-95"
         >
-          <ArrowLeftIcon className="w-5 h-5" />
+          <ChevronLeftIcon className="w-6 h-6" />
           <span className="font-semibold">Back to Home</span>
         </button>
 
