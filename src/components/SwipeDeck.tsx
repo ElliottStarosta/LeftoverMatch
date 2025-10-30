@@ -1,5 +1,6 @@
 'use client'
 
+
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { XMarkIcon } from '@heroicons/react/24/outline'
@@ -13,9 +14,7 @@ import { useMotionValue, useTransform, PanInfo } from 'framer-motion'
 import { gsap } from 'gsap'
 import { checkDailyClaimLimit, incrementDailyClaimCount } from '@/lib/dailyLimit'
 
-
-
-
+// Swipe Deck Class
 export default function SwipeDeck() {
   const { user, loading } = useAuth()
   const router = useRouter()
