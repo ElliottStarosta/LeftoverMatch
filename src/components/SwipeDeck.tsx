@@ -31,6 +31,7 @@ export default function SwipeDeck() {
   const [error, setError] = useState<string | null>(null)
   const [claiming, setClaiming] = useState(false)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [isChecking, setIsChecking] = useState(false)
 
 
   const x = useMotionValue(0)
@@ -68,6 +69,46 @@ export default function SwipeDeck() {
     const interval = setInterval(cleanup, 5 * 60 * 1000)
     return () => clearInterval(interval)
   }, [])
+
+
+  useEffect(() => {
+    // Only run polling when we have no posts and no errors
+    if (posts.length > 0 || !user || loadingPosts || error) return
+  
+    console.log('📡 Starting polling for new posts...')
+    
+    const pollInterval = setInterval(async () => {
+      if (isChecking) return // Prevent concurrent checks
+      
+      setIsChecking(true)
+      console.log('🔄 Checking for new posts...')
+      
+      try {
+        const result = await getPersonalizedFeed({
+          userId: user.uid,
+          batchSize: 10,
+          excludedPostIds
+        })
+  
+        if (result.posts.length > 0) {
+          console.log('✅ Found new posts:', result.posts.length)
+          setPosts(result.posts)
+          setHasMore(result.hasMore)
+          setLastTimestamp(result.lastTimestamp)
+          setError(null)
+        }
+      } catch (error) {
+        console.error('❌ Error polling for posts:', error)
+      } finally {
+        setIsChecking(false)
+      }
+    }, 3000) // Check every 3 seconds
+  
+    return () => {
+      console.log('🛑 Stopping polling')
+      clearInterval(pollInterval)
+    }
+  }, [posts.length, user, loadingPosts, error, isChecking, excludedPostIds])
 
 
 
@@ -539,6 +580,12 @@ export default function SwipeDeck() {
           <p className="text-gray-600 mb-4 text-sm">
             {error || "You've seen all available food. Check back later!"}
           </p>
+          {!error && posts.length === 0 && (
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
+              <span className="text-sm text-gray-500">Checking for new posts...</span>
+            </div>
+          )}
           <button
             onClick={() => window.location.reload()}
             className="bg-orange-500 text-white px-4 py-2 rounded-full font-semibold hover:bg-orange-600 transition-colors text-sm"
