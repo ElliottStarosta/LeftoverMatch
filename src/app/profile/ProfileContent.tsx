@@ -566,41 +566,75 @@ export default function ProfileContent() {
 
             {/* Location & Settings */}
             {editing && (
-              <div className="profile-section space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Location 📍</label>
-                  <input
-                    type="text"
-                    value={editData.location}
-                    onChange={(e) => setEditData(prev => ({ ...prev, location: e.target.value }))}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-900"
-                    placeholder="Your address"
-                  />
-                </div>
+    <div className="profile-section space-y-5">
+        {/* Location Input Card */}
+        <div className="bg-gradient-to-br from-blue-50 via-cyan-50 to-blue-100 rounded-xl p-5 border-2 border-blue-200">
+            <label className="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <span className="text-lg">📍</span>
+                Your Location
+            </label>
+            <input
+                type="text"
+                value={editData.location}
+                onChange={(e) => setEditData(prev => ({ ...prev, location: e.target.value }))}
+                className="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all text-base placeholder-gray-400"
+                placeholder="123 Main St, City"
+            />
+        </div>
 
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Max Distance: {editData.maxDistance} miles 🚗</label>
-                  <input
+        {/* Distance Slider Card */}
+        <div className="bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 rounded-xl p-6 border-2 border-orange-200">
+            <label className="block text-sm font-bold text-gray-800 mb-6 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                    <span className="text-2xl">🚗</span>
+                    Search Radius
+                </span>
+                <span className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-2 rounded-full text-lg font-bold shadow-lg">
+                    {editData.maxDistance} mi
+                </span>
+            </label>
+            <div className="space-y-4">
+                <input
                     type="range"
                     min="1"
                     max="25"
                     value={editData.maxDistance}
                     onChange={(e) => setEditData(prev => ({ ...prev, maxDistance: parseInt(e.target.value) }))}
-                    className="w-full h-3 bg-gray-200 rounded-full appearance-none cursor-pointer accent-orange-500"
-                  />
+                    className="w-full h-6 bg-gradient-to-r from-orange-200 to-amber-200 rounded-full appearance-none cursor-pointer accent-orange-500 slider-thumb-profile"
+                />
+                <div className="flex justify-between text-xs text-gray-700 font-bold px-1">
+                    <span>1 mi</span>
+                    <span>25 mi</span>
                 </div>
+            </div>
+        </div>
 
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editData.notifications}
-                    onChange={(e) => setEditData(prev => ({ ...prev, notifications: e.target.checked }))}
-                    className="w-5 h-5 rounded text-orange-500"
-                  />
-                  <span className="font-semibold text-gray-700">🔔 Enable notifications</span>
-                </label>
-              </div>
-            )}
+       {/* Notifications Card */}
+<div className="bg-gradient-to-br from-rose-50 via-orange-50 to-rose-100 rounded-xl p-5 border-2 border-rose-200">
+    <label className="flex items-center gap-3 cursor-pointer group">
+        <div className="relative">
+            <input
+                type="checkbox"
+                checked={editData.notifications}
+                onChange={(e) => setEditData(prev => ({ ...prev, notifications: e.target.checked }))}
+                className="sr-only peer"
+            />
+            <div className={`w-12 h-7 rounded-full transition-all duration-300 ${
+                editData.notifications 
+                ? 'bg-gradient-to-r from-rose-500 to-orange-500' 
+                : 'bg-gray-300'
+            }`}></div>
+            <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-all duration-300 ${
+                editData.notifications ? 'translate-x-5' : ''
+            }`}></div>
+        </div>
+        <span className="text-gray-800 font-semibold group-hover:text-rose-600 transition-colors text-sm">
+            🔔 Notify me about nearby food
+        </span>
+    </label>
+</div>
+    </div>
+)}
           </div>
 
           {/* Action Buttons */}
@@ -720,6 +754,33 @@ export default function ProfileContent() {
         input[type="range"]::-moz-range-thumb:hover {
           transform: scale(1.2);
         }
+
+        .slider-thumb-profile::-webkit-slider-thumb {
+    appearance: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f97316, #fbbf24);
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+    border: 4px solid white;
+    touch-action: manipulation;
+}
+
+.slider-thumb-profile::-moz-range-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f97316, #fbbf24);
+    cursor: pointer;
+    border: 4px solid white;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.slider-thumb-profile::-moz-range-track {
+    background: transparent;
+    border: none;
+}Retry
       `}</style>
     </div>
   )
