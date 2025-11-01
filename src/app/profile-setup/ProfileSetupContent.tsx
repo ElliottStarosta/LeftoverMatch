@@ -6,9 +6,9 @@ import { getDb } from '@/lib/firebase-utils'
 import { useAuth } from '@/lib/useAuth'
 import { User } from '@/types'
 import { geocodeAddress } from '@/lib/geocoding'
+import LoadingSpinner from '../../components/LoadingSpinner'
 
 import { gsap } from 'gsap'
-import LoadingSpinner from '@/components/LoadingSpinner'
 
 export default function ProfileSetupPage() {
     const { user, loading } = useAuth()

@@ -650,7 +650,6 @@ if (!currentPost) {
               x,
               y,
               rotate,
-              opacity
             }}
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{

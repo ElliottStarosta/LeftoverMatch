@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/useAuth'
 import { signOut } from 'firebase/auth'
 import { User } from '@/types'
 import { gsap } from 'gsap'
+import LoadingSpinner from '../../components/LoadingSpinner'
 import { 
   StarIcon, 
   ArrowLeftIcon,

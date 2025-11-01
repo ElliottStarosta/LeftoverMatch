@@ -18,6 +18,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { HeartIcon } from '@heroicons/react/24/solid'
 import { DirectionsMap } from '@/components/DirectionsMap'
+import LoadingSpinner from '@/components/LoadingSpinner'
 
 interface Conversation {
   id: string
