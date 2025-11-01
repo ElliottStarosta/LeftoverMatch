@@ -1,8 +1,7 @@
 'use client'
 
 
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useMemo } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/lib/useAuth'
 import { getPersonalizedFeed, AlgorithmPost } from '@/lib/algorithm'
@@ -10,7 +9,7 @@ import { createClaim, isPostAvailable } from '@/lib/claims'
 import FoodCard from './FoodCard'
 import ClaimModal from './ClaimModal'
 import { useRouter } from 'next/navigation'
-import { useMotionValue, useTransform, PanInfo } from 'framer-motion'
+import { useMotionValue, useTransform, PanInfo, motion, AnimatePresence } from 'framer-motion'
 import { gsap } from 'gsap'
 import { checkDailyClaimLimit, incrementDailyClaimCount } from '@/lib/dailyLimit'
 
@@ -70,45 +69,76 @@ export default function SwipeDeck() {
     return () => clearInterval(interval)
   }, [])
 
-
   useEffect(() => {
-    // Only run polling when we have no posts and no errors
-    if (posts.length > 0 || !user || loadingPosts || error) return
+    const remainingCards = posts.length - currentIndex
   
-    console.log('📡 Starting polling for new posts...')
-    
-    const pollInterval = setInterval(async () => {
-      if (isChecking) return // Prevent concurrent checks
-      
-      setIsChecking(true)
-      console.log('🔄 Checking for new posts...')
-      
-      try {
-        const result = await getPersonalizedFeed({
-          userId: user.uid,
-          batchSize: 10,
-          excludedPostIds
-        })
-  
-        if (result.posts.length > 0) {
-          console.log('✅ Found new posts:', result.posts.length)
-          setPosts(result.posts)
-          setHasMore(result.hasMore)
-          setLastTimestamp(result.lastTimestamp)
-          setError(null)
-        }
-      } catch (error) {
-        console.error('❌ Error polling for posts:', error)
-      } finally {
-        setIsChecking(false)
-      }
-    }, 3000) // Check every 3 seconds
-  
-    return () => {
-      console.log('🛑 Stopping polling')
-      clearInterval(pollInterval)
+    // Load MUCH earlier - when 8-10 cards left (super aggressive buffer)
+    if (remainingCards <= 10 && hasMore && !loadingMore && !loadingPosts) {
+      console.log('⚠️ Preloading more posts (', remainingCards, 'cards left)...')
+      loadMorePosts()
     }
-  }, [posts.length, user, loadingPosts, error, isChecking, excludedPostIds])
+  }, [currentIndex, posts.length, hasMore, loadingMore, loadingPosts])
+
+
+  const excludedPostIdsKey = useMemo(() => excludedPostIds.join(','), [excludedPostIds])
+
+useEffect(() => {
+  const hasPostsToShow = currentIndex < posts.length
+
+  console.log('🔍 Polling check:', {
+    currentIndex,
+    postsLength: posts.length,
+    hasPostsToShow,
+    hasUser: !!user,
+    loadingPosts,
+    hasError: !!error
+  })
+
+  // Only poll when we've run out of posts to show
+  if (hasPostsToShow || !user || loadingPosts) {
+    return
+  }
+
+  console.log('📡 Starting polling for new posts...')
+  
+  const pollInterval = setInterval(async () => {
+    if (isChecking) {
+      console.log('⏭️ Already checking, skipping...')
+      return
+    }
+    
+    setIsChecking(true)
+    console.log('🔄 Checking for new posts...')
+    
+    try {
+      const result = await getPersonalizedFeed({
+        userId: user.uid,
+        batchSize: 10,
+        excludedPostIds
+      })
+
+      if (result.posts.length > 0) {
+        console.log('✅ Found new posts:', result.posts.length)
+        setPosts(result.posts)
+        setCurrentIndex(0) // Reset to start of new posts
+        setHasMore(result.hasMore)
+        setLastTimestamp(result.lastTimestamp)
+        setError(null)
+      } else {
+        console.log('❌ No new posts found yet')
+      }
+    } catch (error) {
+      console.error('❌ Error polling for posts:', error)
+    } finally {
+      setIsChecking(false)
+    }
+  }, 3000)
+
+  return () => {
+    console.log('🛑 Stopping polling')
+    clearInterval(pollInterval)
+  }
+}, [currentIndex, posts.length, user, loadingPosts, excludedPostIdsKey])
 
 
 
@@ -182,7 +212,7 @@ export default function SwipeDeck() {
     try {
       const result = await getPersonalizedFeed({
         userId: user.uid,
-        batchSize: 10,
+        batchSize: 20,
         lastPostTimestamp: lastTimestamp || undefined,
         excludedPostIds
       })
@@ -209,8 +239,9 @@ export default function SwipeDeck() {
   // ============================================
   useEffect(() => {
     const remainingCards = posts.length - currentIndex
+    console.log("remaining", remainingCards)
 
-    if (remainingCards <= 2 && hasMore && !loadingMore && !loadingPosts) {
+    if (remainingCards <= 5 && hasMore && !loadingMore && !loadingPosts) {
       console.log('⚠️ Near end of deck (', remainingCards, 'cards left), loading more...')
       loadMorePosts()
     }
@@ -567,6 +598,20 @@ export default function SwipeDeck() {
   }
 
   // ============================================
+// NO CURRENT POST - LOADING MORE
+// ============================================
+if (!currentPost) {
+  return (
+    <div className="flex items-center justify-center h-full bg-white rounded-2xl shadow-xl">
+      <div className="text-center p-6">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+        <p className="text-gray-600 text-sm">Finding more food...</p>
+      </div>
+    </div>
+  )
+}
+
+  // ============================================
   // EMPTY STATE
   // ============================================
   if (!currentPost && !hasMore) {
@@ -641,18 +686,8 @@ export default function SwipeDeck() {
             </div>
           </motion.div>
         )}
-
-        {/* Loading More Indicator */}
-        {loadingMore && (
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg z-10 pointer-events-none">
-            <div className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
-              <span className="text-sm text-gray-600">Loading more...</span>
-            </div>
-          </div>
-        )}
       </div>
-
+  
       {/* Claim Modal */}
       {showClaimModal && selectedPost && user && currentClaimId && (
         <ClaimModal

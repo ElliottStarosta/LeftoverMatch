@@ -101,7 +101,7 @@ async function createRandomFoodPosts() {
     const pickupEnd = new Date(pickupStart.getTime() + 2 * 60 * 60 * 1000) // 2 hours after start
     
     const postData = {
-      userId: 'zK1mmw2X7BZmqgpN83iiTKRnKQw2', // ⚠️ IMPORTANT: Replace with your actual Firebase Auth user ID
+      userId: 'H9R4YpVu8HcwMHJwir3FTdo1Ftz2',
       title: food.title,
       description: food.description,
       photoUrl: food.photoUrl,
@@ -202,6 +202,7 @@ export default function CreatePostPage() {
       handleLocationPermission()
     }
   }, [mounted, user])
+  
 
   // Auto-fill pickup window with today's date
   useEffect(() => {
@@ -239,6 +240,53 @@ export default function CreatePostPage() {
       }))
     }
   }, [mounted])
+
+  useEffect(() => {
+    if (mounted && !formData.preparedAt) {
+      const now = new Date()
+      
+      // Format for datetime-local input (local time, not UTC)
+      const year = now.getFullYear()
+      const month = String(now.getMonth() + 1).padStart(2, '0')
+      const day = String(now.getDate()).padStart(2, '0')
+      const hours = String(now.getHours()).padStart(2, '0')
+      const minutes = String(now.getMinutes()).padStart(2, '0')
+
+      const preparedAtTime = `${year}-${month}-${day}T${hours}:${minutes}`
+
+      setFormData(prev => ({
+        ...prev,
+        preparedAt: preparedAtTime
+      }))
+    }
+  }, [mounted])
+
+  useEffect(() => {
+    if (mounted && formData.location && formData.location.length > 5) {
+      const geocodeAddress = async () => {
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.location)}`
+          )
+          const data = await response.json()
+          
+          if (data && data.length > 0) {
+            const result = data[0]
+            setFormData(prev => ({
+              ...prev,
+              lat: parseFloat(result.lat),
+              lng: parseFloat(result.lon)
+            }))
+          }
+        } catch (error) {
+          console.error('Error geocoding address:', error)
+        }
+      }
+
+      const debounceTimer = setTimeout(geocodeAddress, 800)
+      return () => clearTimeout(debounceTimer)
+    }
+  }, [formData.location, mounted])
 
   useEffect(() => {
     if (!loading && !user) {
@@ -514,11 +562,43 @@ export default function CreatePostPage() {
       setError('Please upload a photo of your food')
       return
     }
-  
+
     setSubmitting(true)
     setError('')
-  
+
     try {
+      // If location doesn't have coordinates yet, geocode it now
+      let finalLat = formData.lat
+      let finalLng = formData.lng
+
+      console.log('📍 Starting geocoding. Location:', formData.location, 'Current lat/lng:', finalLat, finalLng)
+
+      if ((formData.lat === 0 || formData.lng === 0) && formData.location) {
+        try {
+          const query = encodeURIComponent(formData.location)
+          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}`
+          console.log('🔍 Geocoding URL:', url)
+
+          const response = await fetch(url)
+          console.log('📡 Geocoding response status:', response.status)
+
+          const data = await response.json()
+          console.log('📊 Geocoding response data:', data)
+          
+          if (data && data.length > 0) {
+            finalLat = parseFloat(data[0].lat)
+            finalLng = parseFloat(data[0].lon)
+            console.log('✅ Geocoded successfully! Lat:', finalLat, 'Lng:', finalLng)
+          } else {
+            console.warn('⚠️ No results found for address:', formData.location)
+          }
+        } catch (geocodeError) {
+          console.error('❌ Error geocoding address:', geocodeError)
+        }
+      }
+
+      console.log('📤 Final coordinates being sent. Lat:', finalLat, 'Lng:', finalLng)
+  
       let imageUrl = ''
   
       if (formData.image) {
@@ -557,7 +637,7 @@ export default function CreatePostPage() {
         title: formData.title,
         description: formData.description,
         photoUrl: imageUrl,
-        location: { lat: formData.lat, lng: formData.lng, address: formData.location },
+        location: { lat: finalLat, lng: finalLng, address: formData.location },
         status: 'available',
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),

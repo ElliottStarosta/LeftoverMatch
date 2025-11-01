@@ -20,7 +20,7 @@ export async function checkDailyClaimLimit(userId: string): Promise<{
     }
 
     const userData = userDoc.data()
-    const maxClaims = 3 // Daily limit per user
+    const maxClaims = 10 // Daily limit per user
 
     // Get or initialize daily claim tracking
     const dailyClaimsData = userData.dailyClaims || {}

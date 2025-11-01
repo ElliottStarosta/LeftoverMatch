@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { getDb } from '@/lib/firebase-utils'
 import { useAuth } from '@/lib/useAuth'
 import { XMarkIcon } from '@heroicons/react/24/outline'
@@ -15,6 +16,7 @@ interface Toast {
 
 export default function NotificationToast() {
   const { user } = useAuth()
+  const router = useRouter()
   const [toast, setToast] = useState<Toast | null>(null)
   const [isVisible, setIsVisible] = useState(false)
 
@@ -26,14 +28,14 @@ export default function NotificationToast() {
         const db = getDb()
         if (!db) return
 
-        const { collection, query, where, orderBy, onSnapshot } = await import('firebase/firestore')
+        const { collection, query, where, orderBy, onSnapshot, limit } = await import('firebase/firestore')
 
         const notifQuery = query(
           collection(db, 'notifications'),
           where('userId', '==', user.uid),
           where('read', '==', false),
           orderBy('createdAt', 'desc'),
-          (await import('firebase/firestore')).limit(1)
+          limit(1)
         )
 
         const unsubscribe = onSnapshot(notifQuery, (snapshot) => {
@@ -70,7 +72,60 @@ export default function NotificationToast() {
     }
 
     subscribeToNotifications()
-  }, [user, toast])
+  }, [user])
+
+  const dismissNotification = async () => {
+    if (!toast) return
+
+    setIsVisible(false)
+    setTimeout(() => setToast(null), 300)
+
+    // Delete notification from Firebase
+    try {
+      const db = getDb()
+      if (!db) return
+
+      const { doc, deleteDoc } = await import('firebase/firestore')
+      await deleteDoc(doc(db, 'notifications', toast.id))
+    } catch (error) {
+      console.error('Error deleting notification:', error)
+    }
+  }
+
+  // Handle notification click - navigate to conversation
+  const handleNotificationClick = async () => {
+    if (!toast?.conversationId) {
+      console.log('No conversation ID:', toast)
+      return
+    }
+
+    console.log('Navigating to conversation:', toast.conversationId)
+
+    // Delete notification immediately
+    try {
+      const db = getDb()
+      if (!db) return
+
+      const { doc, deleteDoc } = await import('firebase/firestore')
+      await deleteDoc(doc(db, 'notifications', toast.id))
+    } catch (error) {
+      console.error('Error deleting notification:', error)
+    }
+
+    // Dismiss the toast
+    setIsVisible(false)
+    setToast(null)
+    
+    // Navigate to messages with conversation param
+    setTimeout(() => {
+      router.push(`/messages?conversation=${toast.conversationId}`)
+      setTimeout(() => {
+        router.push('/messages')
+      }, 1000) // wait 1000 ms before going to /messages
+    }, 100)
+    
+    
+  }
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -106,8 +161,9 @@ export default function NotificationToast() {
 
   return (
     <div className="fixed bottom-6 right-4 z-50 sm:bottom-8 sm:right-6 pointer-events-none">
-      <div
-        className={`pointer-events-auto bg-white rounded-xl shadow-lg border-l-4 ${getBorderColor(toast.type)} p-4 max-w-xs transition-all duration-300 transform ${
+      <button
+        onClick={handleNotificationClick}
+        className={`pointer-events-auto bg-white rounded-xl shadow-lg border-l-4 ${getBorderColor(toast.type)} p-4 max-w-xs transition-all duration-300 transform hover:shadow-xl active:scale-95 w-full text-left ${
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
         }`}
       >
@@ -122,16 +178,16 @@ export default function NotificationToast() {
           </div>
 
           <button
-            onClick={() => {
-              setIsVisible(false)
-              setTimeout(() => setToast(null), 300)
+            onClick={(e) => {
+              e.stopPropagation()
+              dismissNotification()
             }}
             className="flex-shrink-0 p-1 hover:bg-gray-100 rounded transition-colors"
           >
             <XMarkIcon className="w-4 h-4 text-gray-400" />
           </button>
         </div>
-      </div>
+      </button>
     </div>
   )
 }

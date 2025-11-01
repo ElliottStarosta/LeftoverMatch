@@ -82,6 +82,8 @@ export default function MessagesContent() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
+  const [showDirectionsModal, setShowDirectionsModal] = useState(false)
+
 
   // Detect mobile
   useEffect(() => {
@@ -499,6 +501,10 @@ export default function MessagesContent() {
 
     setAccepting(true)
 
+    setSelectedConversation(prev => 
+      prev ? { ...prev, claimAccepted: true } : null
+    )
+
     try {
       const db = getDb()
       if (!db) throw new Error('Database not available')
@@ -555,6 +561,9 @@ export default function MessagesContent() {
     } catch (error) {
       console.error('Error accepting claim:', error)
       alert('Failed to accept claim')
+      setSelectedConversation(prev => 
+        prev ? { ...prev, claimAccepted: false } : null
+      )
     } finally {
       setAccepting(false)
     }
@@ -571,8 +580,22 @@ export default function MessagesContent() {
 
   const handleGetDirections = () => {
     if (!selectedConversation?.postLocation) return
-    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(selectedConversation.postLocation)}`
-    window.open(mapsUrl, '_blank')
+    const address = selectedConversation.postLocation
+    
+    // Detect if iOS or Android
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    const isAndroid = /Android/.test(navigator.userAgent)
+    
+    if (isIOS) {
+      // Apple Maps - use maps:// scheme
+      window.location.href = `maps://?address=${encodeURIComponent(address)}`
+    } else if (isAndroid) {
+      // Google Maps - use geo: scheme
+      window.location.href = `geo:0,0?q=${encodeURIComponent(address)}`
+    } else {
+      // Fallback to Google Maps web for desktop
+      window.open(`https://www.google.com/maps/search/${encodeURIComponent(address)}`, '_blank')
+    }
   }
 
   const handleSelectConversation = (convo: Conversation) => {
@@ -594,6 +617,8 @@ export default function MessagesContent() {
       router.push('/messages')
     }
   }
+
+  
 
   if (authLoading || loading) {
     return (
@@ -621,6 +646,103 @@ export default function MessagesContent() {
   (Date.now() - typingStatus[selectedConversation.id][otherUserId]) < 2000
 
   // MOBILE LAYOUT
+  const DirectionsModal = () => {
+    if (!selectedConversation?.postLocation) return null
+
+    const address = selectedConversation.postLocation
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+
+    return (
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
+        <div className="w-full bg-white rounded-t-3xl p-4 space-y-4 animate-in slide-in-from-bottom">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-lg text-gray-900">Get Directions</h3>
+            <button
+              onClick={() => setShowDirectionsModal(false)}
+              className="p-2 hover:bg-gray-100 rounded-full"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Map Preview */}
+          <div className="bg-gradient-to-br from-orange-100 to-pink-100 rounded-2xl p-4 h-48 flex items-center justify-center border-2 border-orange-200">
+            <div className="text-center">
+              <div className="text-5xl mb-2">📍</div>
+              <p className="text-sm font-semibold text-gray-900 text-center">{address}</p>
+            </div>
+          </div>
+
+          {/* Navigation Options */}
+          <div className="space-y-2">
+            {isIOS ? (
+              <>
+                <button
+                  onClick={() => {
+                    window.location.href = `maps://?address=${encodeURIComponent(address)}`
+                    setShowDirectionsModal(false)
+                  }}
+                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-4 px-4 rounded-2xl font-bold active:scale-95 flex items-center justify-center gap-2 transition-transform shadow-lg"
+                >
+                  🗺️ Open in Apple Maps
+                </button>
+                <button
+                  onClick={() => {
+                    window.open(`https://www.google.com/maps/search/${encodeURIComponent(address)}`, '_blank')
+                    setShowDirectionsModal(false)
+                  }}
+                  className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-4 px-4 rounded-2xl font-bold active:scale-95 flex items-center justify-center gap-2 transition-transform shadow-lg"
+                >
+                  🔴 Open in Google Maps
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => {
+                    window.location.href = `geo:0,0?q=${encodeURIComponent(address)}`
+                    setShowDirectionsModal(false)
+                  }}
+                  className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-4 px-4 rounded-2xl font-bold active:scale-95 flex items-center justify-center gap-2 transition-transform shadow-lg"
+                >
+                  🗺️ Open in Google Maps
+                </button>
+                <button
+                  onClick={() => {
+                    window.open(`https://www.google.com/maps/search/${encodeURIComponent(address)}`, '_blank')
+                    setShowDirectionsModal(false)
+                  }}
+                  className="w-full bg-gradient-to-r from-gray-500 to-gray-600 text-white py-4 px-4 rounded-2xl font-bold active:scale-95 flex items-center justify-center gap-2 transition-transform shadow-lg"
+                >
+                  🌐 Open in Browser
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Copy Address Button */}
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(address)
+              alert('Address copied!')
+            }}
+            className="w-full bg-gradient-to-r from-gray-100 to-gray-200 text-gray-900 py-3 px-4 rounded-2xl font-semibold active:scale-95 transition-transform"
+          >
+            📋 Copy Address
+          </button>
+
+          <button
+            onClick={() => setShowDirectionsModal(false)}
+            className="w-full bg-gray-200 text-gray-900 py-3 px-4 rounded-2xl font-semibold active:scale-95 transition-transform"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )
+  }
+  
 
   if (isMobile) {
     // Show chat view
@@ -712,7 +834,7 @@ export default function MessagesContent() {
           </div>
 
           {/* Accept Claim Button */}
-          {isPoster && !isClaimAccepted && (
+          {isPoster && !isClaimAccepted && selectedConversation && !selectedConversation.claimAccepted && (
             <div className="action-button px-4 py-3 bg-gradient-to-r from-green-100 to-emerald-100 border-t-2 border-green-300">
               <button
                 onClick={handleAcceptClaim}
@@ -738,7 +860,7 @@ export default function MessagesContent() {
           {!isPoster && isClaimAccepted && selectedConversation.postLocation && (
             <div className="action-button px-4 py-3 bg-gradient-to-r from-blue-100 to-cyan-100 border-t-2 border-blue-300 space-y-2">
               <button
-                onClick={handleGetDirections}
+                onClick={() => setShowDirectionsModal(true)}
                 className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 px-4 rounded-2xl font-bold active:scale-95 flex items-center justify-center gap-2 transition-transform shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 <MapPinIcon className="w-5 h-5" />
