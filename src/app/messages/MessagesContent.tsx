@@ -503,9 +503,6 @@ export default function MessagesContent() {
 
     setAccepting(true)
 
-    setSelectedConversation(prev =>
-      prev ? { ...prev, claimAccepted: true } : null
-    )
 
     try {
       const db = getDb()
@@ -523,6 +520,7 @@ export default function MessagesContent() {
         status: 'accepted',
         claimAccepted: true,
         addressRevealed: true,
+        postLocation: fullAddress,
         acceptedAt: serverTimestamp()
       })
 
@@ -549,6 +547,10 @@ export default function MessagesContent() {
         read: false,
         createdAt: serverTimestamp()
       })
+
+      setSelectedConversation(prev =>
+        prev ? { ...prev, claimAccepted: true, addressRevealed: true, postLocation: fullAddress } : null
+      )
 
       const button = document.querySelector('.accept-button')
       if (button) {
