@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import LoadingSpinner from './LoadingSpinner'
 
 interface DirectionsMapProps {
   destinationAddress: string
@@ -72,19 +73,19 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
                   13
                 )
 
-                // Add OpenStreetMap tiles
-                ;(window as any).L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                  attribution:
-                    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-                  maxZoom: 19,
-                }).addTo(map.current)
+                  // Add OpenStreetMap tiles
+                  ; (window as any).L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution:
+                      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                    maxZoom: 19,
+                  }).addTo(map.current)
 
-                // Add user marker
-                ;(window as any).L.marker([userLat, userLng], {
-                  title: 'Your Location',
-                })
-                  .addTo(map.current)
-                  .bindPopup('📍 Your Location')
+                  // Add user marker
+                  ; (window as any).L.marker([userLat, userLng], {
+                    title: 'Your Location',
+                  })
+                    .addTo(map.current)
+                    .bindPopup('📍 Your Location')
               } catch (err) {
                 setError('Error initializing map')
                 return
@@ -94,10 +95,10 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
             // Geocode destination address
             try {
               const coords = await geocodeAddress(destinationAddress)
-              
+
               if (coords && map.current) {
                 // Add destination marker
-                ;(window as any).L.marker([coords.lat, coords.lng], {
+                ; (window as any).L.marker([coords.lat, coords.lng], {
                   title: destinationAddress,
                 })
                   .addTo(map.current)
@@ -166,11 +167,11 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
           try {
             map.current = (window as any).L.map(mapContainer.current).setView([40.7128, -74.006], 13)
 
-            ;(window as any).L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-              attribution:
-                '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-              maxZoom: 19,
-            }).addTo(map.current)
+              ; (window as any).L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution:
+                  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 19,
+              }).addTo(map.current)
 
             setError('Location access denied. Showing default map.')
             setLoading(false)
@@ -195,10 +196,7 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
     <div className="relative w-full h-full">
       {loading && (
         <div className="absolute inset-0 bg-orange-100 rounded-2xl flex items-center justify-center z-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-2"></div>
-            <p className="text-sm text-gray-600">Loading directions...</p>
-          </div>
+          <LoadingSpinner text="Loading directions..." fullScreen={false} size="sm" />
         </div>
       )}
       {error && (
@@ -208,8 +206,8 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
           </div>
         </div>
       )}
-      <div 
-        ref={mapContainer} 
+      <div
+        ref={mapContainer}
         className="w-full h-full rounded-2xl overflow-hidden"
         data-testid="map-container"
       />

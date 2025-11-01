@@ -12,6 +12,7 @@ import { gsap } from 'gsap'
 import {
   ChevronLeftIcon
 } from '@heroicons/react/24/outline'
+import LoadingSpinner from '@/components/LoadingSpinner'
 
 async function createRandomFoodPosts() {
   const db = getDb()
@@ -663,14 +664,7 @@ export default function CreatePostPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-100 via-amber-50 to-yellow-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg font-medium">Loading...</p>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner text="Loading..." />
   }
 
   if (!user) {

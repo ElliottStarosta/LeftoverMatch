@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/useAuth'
 import { useIsMounted } from '@/lib/useIsMounted'
 import Navbar from '@/components/Navbar'
 import SwipeDeck from '@/components/SwipeDeck'
+import LoadingSpinner from '@/components/LoadingSpinner'
 
 export default function HomeContent() {
   const { user, loading, error } = useAuth()
@@ -19,14 +20,7 @@ export default function HomeContent() {
   }, [user, loading, router])
 
   if (!isMounted) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-green-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner text="Loading..." fullScreen />
   }
 
   if (error) {
@@ -70,15 +64,8 @@ export default function HomeContent() {
       
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-2">
         <div className="w-full max-w-sm h-full max-h-[calc(100vh-120px)]">
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-full bg-white rounded-2xl shadow-lg">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading food posts...</p>
-              </div>
-            </div>
-          }>
-            <SwipeDeck />
+        <Suspense fallback={<LoadingSpinner text="Loading food posts..." fullScreen={false} size="sm" />}>
+        <SwipeDeck />
           </Suspense>
         </div>
       </main>

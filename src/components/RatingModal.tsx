@@ -7,6 +7,7 @@ import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
 import { getDb } from '@/lib/firebase-utils'
 import Image from 'next/image'
 import { calculateLevel } from '@/lib/levels'
+import LoadingSpinner from './LoadingSpinner'
 
 
 interface RatingModalProps {
@@ -97,7 +98,7 @@ export default function RatingModal({
 
   const handleClose = () => {
     const tl = gsap.timeline()
-    
+
     if (cardRef.current) {
       tl.to(cardRef.current, {
         scale: 0.8,
@@ -107,7 +108,7 @@ export default function RatingModal({
         ease: 'power2.in'
       })
     }
-    
+
     if (modalRef.current) {
       tl.to(modalRef.current, {
         opacity: 0,
@@ -122,18 +123,18 @@ export default function RatingModal({
       alert('Please select a rating')
       return
     }
-  
+
     setSubmitting(true)
-  
+
     try {
       const db = getDb()
       if (!db) throw new Error('Database not available')
-  
+
       const { collection, addDoc, doc, getDoc, updateDoc, deleteDoc, serverTimestamp, increment } = await import('firebase/firestore')
-  
+
       console.log('Step 1: Creating rating...')
       console.log('Data:', { postId, posterId, claimerId: currentUserId, claimId, stars: rating })
-      
+
       // Create rating
       await addDoc(collection(db, 'ratings'), {
         postId,
@@ -145,22 +146,22 @@ export default function RatingModal({
         createdAt: serverTimestamp()
       })
       console.log('✓ Rating created')
-  
+
       console.log('Step 2: Fetching poster doc...')
       // Update poster's trust score
       const posterDoc = await getDoc(doc(db, 'users', posterId))
       console.log('✓ Poster doc fetched')
-      
+
       if (posterDoc.exists()) {
         console.log('Step 3: Updating poster...')
         const posterData = posterDoc.data()
         const currentTrustScore = posterData.trustScore || 0.5
         const totalRatings = posterData.totalRatings || 0
         const successfulPosts = posterData.successfulPosts || 0
-  
+
         const newTrustScore = ((currentTrustScore * totalRatings) + (rating / 5)) / (totalRatings + 1)
         const newLevel = calculateLevel(totalRatings + 1, newTrustScore, successfulPosts + 1)
-        
+
         await updateDoc(doc(db, 'users', posterId), {
           trustScore: newTrustScore,
           totalRatings: increment(1),
@@ -168,7 +169,7 @@ export default function RatingModal({
           level: newLevel
         })
         console.log('✓ Poster updated')
-  
+
         if (newLevel !== posterData.level) {
           console.log('Step 4: Creating level up notification...')
           await addDoc(collection(db, 'notifications'), {
@@ -181,7 +182,7 @@ export default function RatingModal({
           console.log('✓ Level up notification created')
         }
       }
-  
+
       console.log('Step 5: Updating claimer...')
       // Update claimer's completed claims
       await updateDoc(doc(db, 'users', currentUserId), {
@@ -189,7 +190,7 @@ export default function RatingModal({
         totalClaims: increment(1)
       })
       console.log('✓ Claimer updated')
-  
+
       console.log('Step 6: Creating rating notification...')
       // Send notification to poster
       await addDoc(collection(db, 'notifications'), {
@@ -202,17 +203,17 @@ export default function RatingModal({
         createdAt: serverTimestamp()
       })
       console.log('✓ Rating notification created')
-  
+
       console.log('Step 7: Deleting claim...')
       // Delete the claim
       await deleteDoc(doc(db, 'claims', claimId))
       console.log('✓ Claim deleted')
-  
+
       console.log('Step 8: Deleting post...')
       // Delete the post
       await deleteDoc(doc(db, 'posts', postId))
       console.log('✓ Post deleted')
-  
+
       console.log('Step 9: Deleting conversation...')
       // Delete the conversation
       await deleteDoc(doc(db, 'conversations', conversationId))
@@ -222,9 +223,9 @@ export default function RatingModal({
       await deleteConversationMessages(conversationId);
       console.log('✓ All messages deleted');
 
-  
+
       console.log('SUCCESS!')
-  
+
       // Success animation
       if (cardRef.current) {
         gsap.to(cardRef.current, {
@@ -318,8 +319,7 @@ export default function RatingModal({
         >
           {submitting ? (
             <span className="flex items-center justify-center gap-2">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              Submitting...
+              <LoadingSpinner text="Submitting..." fullScreen={false} size="sm" />
             </span>
           ) : (
             'Submit Rating'

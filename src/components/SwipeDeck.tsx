@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation'
 import { useMotionValue, useTransform, PanInfo, motion, AnimatePresence } from 'framer-motion'
 import { gsap } from 'gsap'
 import { checkDailyClaimLimit, incrementDailyClaimCount } from '@/lib/dailyLimit'
+import LoadingSpinner from './LoadingSpinner'
 
 // Swipe Deck Class
 export default function SwipeDeck() {
@@ -587,28 +588,14 @@ useEffect(() => {
   // LOADING STATE
   // ============================================
   if (loadingPosts) {
-    return (
-      <div className="flex items-center justify-center h-full bg-white rounded-2xl shadow-xl">
-        <div className="text-center p-6">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-sm">Finding food near you...</p>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner text="Finding food near you..." fullScreen={false} size="sm" />
   }
 
   // ============================================
 // NO CURRENT POST - LOADING MORE
 // ============================================
 if (!currentPost) {
-  return (
-    <div className="flex items-center justify-center h-full bg-white rounded-2xl shadow-xl">
-      <div className="text-center p-6">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
-        <p className="text-gray-600 text-sm">Finding more food...</p>
-      </div>
-    </div>
-  )
+  return <LoadingSpinner text="Finding more food..." fullScreen={false} size="sm" />
 }
 
   // ============================================
@@ -646,14 +633,7 @@ if (!currentPost) {
   // LOADING MORE INDICATOR
   // ============================================
   if (!currentPost && loadingMore) {
-    return (
-      <div className="flex items-center justify-center h-full bg-white rounded-2xl shadow-xl">
-        <div className="text-center p-6">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-sm">Loading more food...</p>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner text="Loading more food..." fullScreen={false} size="sm" />
   }
 
   // ============================================

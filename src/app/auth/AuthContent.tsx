@@ -6,6 +6,8 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPasswor
 import { getFirestore, doc, getDoc } from 'firebase/firestore'
 import { initializeApp, getApps } from 'firebase/app'
 import { gsap } from 'gsap'
+import LoadingSpinner from '@/components/LoadingSpinner'
+
 
 // Initialize Firebase directly in this component
 const firebaseConfig = {
@@ -374,14 +376,7 @@ export default function AuthPage() {
   }
 
   if (!mounted) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-100 via-orange-50 to-pink-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-rose-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg font-medium">Loading...</p>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner text="Loading..." />
   }
 
   return (

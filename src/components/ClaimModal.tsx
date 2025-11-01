@@ -7,6 +7,7 @@ import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid'
 import { getDb } from '@/lib/firebase-utils'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import LoadingSpinner from './LoadingSpinner'
 
 interface ClaimModalProps {
   post: {
@@ -235,8 +236,7 @@ export default function ClaimModal({ post, onClose, claimId, currentUserId }: Cl
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-3xl p-8 shadow-2xl">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <LoadingSpinner text="Loading..." fullScreen={false} />
         </div>
       </div>
     )
