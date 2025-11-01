@@ -31,6 +31,8 @@ export default function ProfileSetupPage() {
     const [mounted, setMounted] = useState(false)
     const [randomTip, setRandomTip] = useState('')
     const [error, setError] = useState('')
+    const formRef = useRef<HTMLFormElement>(null)
+
 
 
     const loadingTips = [
@@ -486,6 +488,11 @@ export default function ProfileSetupPage() {
                 repeat: 1
             })
         }
+        // Scroll to top BEFORE changing step
+        window.scrollTo({ top: 0, behavior: 'auto' })
+        if (formRef.current) {
+            formRef.current.scrollTop = 0
+        }
         setStep(step + 1)
     }
 
@@ -499,8 +506,14 @@ export default function ProfileSetupPage() {
                 repeat: 1
             })
         }
+        // Scroll to top BEFORE changing step
+        window.scrollTo({ top: 0, behavior: 'auto' })
+        if (formRef.current) {
+            formRef.current.scrollTop = 0
+        }
         setStep(step - 1)
     }
+
 
     const toggleOption = (category: 'dietaryRestrictions' | 'foodPreferences' | 'allergies', value: string) => {
         const element = document.querySelector(`[data-option="${value}"]`)
@@ -534,99 +547,101 @@ export default function ProfileSetupPage() {
     }
 
 
+
+
     return (
-        <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-rose-100 via-orange-50 to-pink-100 py-4 sm:py-8 px-3 sm:px-4 relative overflow-hidden">
+        <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-rose-100 via-orange-50 to-pink-100 py-4 px-3 relative overflow-hidden flex flex-col">
             {/* Animated background elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute -top-20 -left-20 w-56 sm:w-72 h-56 sm:h-72 bg-rose-300/30 rounded-full blur-3xl animate-blob"></div>
                 <div className="absolute -bottom-20 -right-20 w-56 sm:w-72 h-56 sm:h-72 bg-orange-300/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
                 <div className="absolute top-1/2 left-1/2 w-56 sm:w-72 h-56 sm:h-72 bg-pink-300/30 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
             </div>
-    
-            <div className="max-w-4xl mx-auto relative z-10">
-                <div ref={cardRef} className="bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-white/60">
-                    {/* Header */}
-                    <div className="bg-gradient-to-r from-rose-500 via-orange-500 to-pink-500 p-4 sm:p-8 text-center relative">
-                        <div className="text-4xl sm:text-6xl mb-2 sm:mb-3 animate-bounce">🍽️</div>
-                        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">Create Your Profile</h1>
-                        <p className="text-white/90 text-xs sm:text-sm">Let's find your perfect food match</p>
+
+            <div className="max-w-4xl mx-auto w-full relative z-10 flex flex-col flex-1">
+                <div ref={cardRef} className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-white/60 flex flex-col flex-1">
+                    {/* Header - Fixed */}
+                    <div className="bg-gradient-to-r from-rose-500 via-orange-500 to-pink-500 p-6 text-center flex-shrink-0">
+                        <div className="text-5xl mb-2 animate-bounce">🍽️</div>
+                        <h1 className="text-2xl font-bold text-white mb-1">Create Your Profile</h1>
+                        <p className="text-white/90 text-sm">Let's find your perfect food match</p>
                     </div>
-    
-                    {/* Progress Bar */}
-                    <div ref={progressRef} className="px-4 sm:px-8 pt-4 sm:pt-6">
-                        <div className="flex justify-between text-xs font-semibold text-gray-500 mb-2 sm:mb-3">
+
+                    {/* Progress Bar - Fixed */}
+                    <div ref={progressRef} className="px-6 pt-4 flex-shrink-0">
+                        <div className="flex justify-between text-xs font-semibold text-gray-500 mb-2">
                             <span>Step {step} of 4</span>
                             <span>{Math.round((step / 4) * 100)}%</span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 sm:h-3 overflow-hidden">
+                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                             <div
-                                className="progress-fill bg-gradient-to-r from-rose-500 via-orange-500 to-pink-500 h-2 sm:h-3 rounded-full transition-all duration-500 ease-out"
+                                className="progress-fill bg-gradient-to-r from-rose-500 via-orange-500 to-pink-500 h-2 rounded-full transition-all duration-500 ease-out"
                                 style={{ width: `${(step / 4) * 100}%` }}
                             />
                         </div>
                     </div>
-    
-                    {/* Form Content */}
-                    <form onSubmit={handleSubmit} className="p-4 sm:p-8 overflow-y-auto max-h-[calc(100vh-300px)] sm:max-h-none">
-                        <div ref={contentRef} className="space-y-4 sm:space-y-6">
+
+                    {/* Form Content - Scrollable */}
+                    <form ref={formRef} onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 flex flex-col">
+                        <div ref={contentRef} className="space-y-5 flex-1">
                             {step === 1 && (
                                 <>
-                                    <div className="text-center mb-4 sm:mb-6">
-                                        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-1 sm:mb-2">About You</h2>
-                                        <p className="text-gray-500 text-xs sm:text-sm">Tell us who you are</p>
+                                    <div className="text-center mb-4">
+                                        <h2 className="text-xl font-bold text-gray-800 mb-1">About You</h2>
+                                        <p className="text-gray-500 text-sm">Tell us who you are</p>
                                     </div>
-    
-                                    <div className="space-y-3 sm:space-y-4">
-                                        <div className="group">
-                                            <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-2">
+
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-2">
                                                 What's your name? ✨
                                             </label>
                                             <input
                                                 type="text"
                                                 value={formData.name}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                                                className="w-full px-3 sm:px-5 py-2 sm:py-3 border-2 border-gray-200 rounded-lg sm:rounded-2xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-gray-900 bg-white transition-all duration-300 group-hover:border-gray-300 text-sm sm:text-base"
+                                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-gray-900 bg-white transition-all text-base"
                                                 placeholder="Your name"
                                                 required
                                             />
                                         </div>
-    
-                                        <div className="group">
-                                            <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-2">
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-2">
                                                 Tell us about yourself 💬
                                             </label>
                                             <textarea
                                                 value={formData.bio}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
-                                                className="w-full px-3 sm:px-5 py-2 sm:py-3 border-2 border-gray-200 rounded-lg sm:rounded-2xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-gray-900 bg-white transition-all duration-300 group-hover:border-gray-300 resize-none text-sm sm:text-base"
+                                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-gray-900 bg-white transition-all resize-none text-base"
                                                 placeholder="I love trying new cuisines..."
                                                 rows={3}
                                             />
                                         </div>
-    
-                                        <div className="group">
-                                            <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-2">
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-2">
                                                 Profile Photo 📸
                                             </label>
                                             {formData.profileImage ? (
-                                                <div className="space-y-2 sm:space-y-3">
+                                                <div className="space-y-3">
                                                     <img
                                                         src={formData.profileImage}
                                                         alt="Preview"
-                                                        className="w-20 h-20 sm:w-32 sm:h-32 object-cover rounded-full mx-auto shadow-lg"
+                                                        className="w-24 h-24 object-cover rounded-full mx-auto shadow-lg"
                                                     />
                                                     <button
                                                         type="button"
                                                         onClick={() => setFormData(prev => ({ ...prev, profileImage: '' }))}
-                                                        className="text-red-500 text-xs sm:text-sm font-semibold hover:text-red-700 px-3 py-1 rounded-full hover:bg-red-50 transition-all duration-300 mx-auto block w-full"
+                                                        className="w-full text-red-500 text-sm font-semibold hover:text-red-700 py-2 rounded-lg hover:bg-red-50 transition-all"
                                                     >
                                                         🗑️ Remove Image
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="border-2 border-dashed border-gray-200 rounded-lg sm:rounded-2xl p-3 sm:p-6 text-center hover:border-orange-400 transition-all duration-300 bg-gradient-to-br from-orange-50/50 to-amber-50/50">
-                                                    <div className="text-4xl sm:text-6xl mb-2">📷</div>
-                                                    <p className="text-gray-600 font-medium mb-2 sm:mb-4 text-xs sm:text-sm">Upload your profile photo</p>
+                                                <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center hover:border-orange-400 transition-all bg-gradient-to-br from-orange-50/50 to-amber-50/50">
+                                                    <div className="text-4xl mb-2">📷</div>
+                                                    <p className="text-gray-600 font-medium mb-3 text-sm">Upload your profile photo</p>
                                                     <input
                                                         type="file"
                                                         accept="image/*"
@@ -636,7 +651,7 @@ export default function ProfileSetupPage() {
                                                                 try {
                                                                     const formDataToSend = new FormData()
                                                                     formDataToSend.append('image', file)
-    
+
                                                                     const uploadResponse = await fetch(
                                                                         `https://api.imgbb.com/1/upload?key=${process.env.NEXT_PUBLIC_IMGBB_API_KEY}`,
                                                                         {
@@ -644,9 +659,9 @@ export default function ProfileSetupPage() {
                                                                             body: formDataToSend
                                                                         }
                                                                     )
-    
+
                                                                     if (!uploadResponse.ok) throw new Error('Failed to upload')
-    
+
                                                                     const uploadData = await uploadResponse.json()
                                                                     setFormData(prev => ({ ...prev, profileImage: uploadData.data.url }))
                                                                 } catch (error) {
@@ -660,7 +675,7 @@ export default function ProfileSetupPage() {
                                                     />
                                                     <label
                                                         htmlFor="profile-image-upload"
-                                                        className="inline-block bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl font-bold hover:from-orange-600 hover:to-amber-600 cursor-pointer transform hover:scale-105 transition-all duration-300 shadow-lg text-xs sm:text-sm"
+                                                        className="inline-block bg-gradient-to-r from-orange-500 to-amber-500 text-white px-5 py-2 rounded-lg font-bold hover:from-orange-600 hover:to-amber-600 cursor-pointer transform hover:scale-105 transition-all shadow-lg text-sm"
                                                     >
                                                         Choose Photo
                                                     </label>
@@ -670,94 +685,94 @@ export default function ProfileSetupPage() {
                                     </div>
                                 </>
                             )}
-    
+
                             {step === 2 && (
                                 <>
                                     <div className="text-center">
-                                        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-1 sm:mb-2">Dietary Style</h2>
-                                        <p className="text-gray-500 text-xs sm:text-sm">Select all that apply</p>
+                                        <h2 className="text-xl font-bold text-gray-800 mb-1">Dietary Style</h2>
+                                        <p className="text-gray-500 text-sm">Select all that apply</p>
                                     </div>
-    
+
                                     <div>
-                                        <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-2 sm:mb-4">
+                                        <label className="block text-sm font-bold text-gray-700 mb-3">
                                             My dietary preferences 🥗
                                         </label>
-                                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
+                                        <div className="grid grid-cols-3 gap-2">
                                             {dietaryOptions.map((option) => (
                                                 <button
                                                     key={option.value}
                                                     type="button"
                                                     data-option={option.value}
                                                     onClick={() => toggleOption('dietaryRestrictions', option.value)}
-                                                    className={`p-2 sm:p-4 rounded-lg sm:rounded-2xl border-2 transition-all duration-300 transform hover:scale-105 flex flex-col items-center ${formData.dietaryRestrictions.includes(option.value)
+                                                    className={`p-3 rounded-lg border-2 transition-all duration-300 transform hover:scale-105 flex flex-col items-center text-xs ${formData.dietaryRestrictions.includes(option.value)
                                                         ? 'bg-gradient-to-br from-rose-500 to-orange-500 border-rose-500 text-white shadow-lg'
                                                         : 'bg-white border-gray-200 text-gray-700 hover:border-rose-300'
                                                         }`}
                                                 >
-                                                    <div className="text-2xl sm:text-3xl mb-1">{option.emoji}</div>
-                                                    <div className="text-xs sm:text-sm font-semibold text-center line-clamp-2">{option.value}</div>
+                                                    <div className="text-2xl mb-1">{option.emoji}</div>
+                                                    <div className="font-semibold text-center line-clamp-2">{option.value}</div>
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
-    
+
                                     <div>
-                                        <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-2 sm:mb-4 mt-4 sm:mt-6">
+                                        <label className="block text-sm font-bold text-gray-700 mb-3 mt-4">
                                             Allergies ⚠️
                                         </label>
-                                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
+                                        <div className="grid grid-cols-3 gap-2">
                                             {allergyOptions.map((allergy) => (
                                                 <button
                                                     key={allergy.value}
                                                     type="button"
                                                     data-option={allergy.value}
                                                     onClick={() => toggleOption('allergies', allergy.value)}
-                                                    className={`p-2 sm:p-4 rounded-lg sm:rounded-2xl border-2 transition-all duration-300 transform hover:scale-105 flex flex-col items-center ${formData.allergies.includes(allergy.value)
+                                                    className={`p-3 rounded-lg border-2 transition-all duration-300 transform hover:scale-105 flex flex-col items-center text-xs ${formData.allergies.includes(allergy.value)
                                                         ? 'bg-gradient-to-br from-red-500 to-orange-500 border-red-500 text-white shadow-lg'
                                                         : 'bg-white border-orange-200 hover:border-orange-300 text-orange-500'
                                                         }`}
                                                 >
-                                                    <div className="text-2xl sm:text-3xl mb-1">{allergy.emoji}</div>
-                                                    <div className="text-xs sm:text-sm font-semibold text-center line-clamp-2">{allergy.value}</div>
+                                                    <div className="text-2xl mb-1">{allergy.emoji}</div>
+                                                    <div className="font-semibold text-center line-clamp-2">{allergy.value}</div>
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
                                 </>
                             )}
-    
+
                             {step === 3 && (
                                 <>
-                                    <div className="text-center mb-4 sm:mb-6">
-                                        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-1 sm:mb-2">Food Preferences</h2>
-                                        <p className="text-gray-500 text-xs sm:text-sm">What cuisines do you love?</p>
+                                    <div className="text-center mb-4">
+                                        <h2 className="text-xl font-bold text-gray-800 mb-1">Food Preferences</h2>
+                                        <p className="text-gray-500 text-sm">What cuisines do you love?</p>
                                     </div>
-    
+
                                     <div>
-                                        <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-2 sm:mb-4">
+                                        <label className="block text-sm font-bold text-gray-700 mb-3">
                                             Favorite cuisines 🌎
                                         </label>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                                        <div className="grid grid-cols-2 gap-2">
                                             {foodPreferences.map((cuisine) => (
                                                 <button
                                                     key={cuisine.value}
                                                     type="button"
                                                     data-option={cuisine.value}
                                                     onClick={() => toggleOption('foodPreferences', cuisine.value)}
-                                                    className={`p-2 sm:p-4 rounded-lg sm:rounded-2xl border-2 transition-all duration-300 transform hover:scale-105 flex flex-col items-center ${formData.foodPreferences.includes(cuisine.value)
+                                                    className={`p-3 rounded-lg border-2 transition-all duration-300 transform hover:scale-105 flex flex-col items-center text-xs ${formData.foodPreferences.includes(cuisine.value)
                                                         ? 'bg-gradient-to-br from-orange-500 to-pink-500 border-orange-500 text-white shadow-lg'
                                                         : 'bg-white border-gray-200 text-gray-700 hover:border-orange-300'
                                                         }`}
                                                 >
-                                                    <div className="text-2xl sm:text-3xl mb-1">{cuisine.emoji}</div>
-                                                    <div className="text-xs sm:text-sm font-semibold text-center line-clamp-2">{cuisine.value}</div>
+                                                    <div className="text-2xl mb-1">{cuisine.emoji}</div>
+                                                    <div className="font-semibold text-center line-clamp-2">{cuisine.value}</div>
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
-    
+
                                     <div>
-                                        <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-2 sm:mb-3 mt-4 sm:mt-6">
+                                        <label className="block text-sm font-bold text-gray-700 mb-2 mt-4">
                                             Cooking skill level 👨‍🍳
                                         </label>
                                         <div className="relative">
@@ -783,7 +798,7 @@ export default function ProfileSetupPage() {
                                                         }
                                                     }
                                                 }}
-                                                className="w-full px-3 sm:px-5 py-2 sm:py-4 border-2 border-gray-200 rounded-lg sm:rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-900 bg-white transition-all duration-300 text-xs sm:text-lg font-medium flex items-center justify-between hover:border-gray-300"
+                                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-900 bg-white transition-all font-medium flex items-center justify-between text-base hover:border-gray-300"
                                             >
                                                 <span className="line-clamp-1">
                                                     {formData.cookingLevel === 'beginner' && '🌱 Beginner'}
@@ -791,12 +806,12 @@ export default function ProfileSetupPage() {
                                                     {formData.cookingLevel === 'advanced' && '⭐ Advanced'}
                                                     {formData.cookingLevel === 'professional' && '👑 Professional'}
                                                 </span>
-                                                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg className="w-5 h-5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                                 </svg>
                                             </button>
-    
-                                            <div className="cooking-dropdown hidden relative w-full mt-2 bg-white border-2 border-orange-300 rounded-lg sm:rounded-2xl shadow-2xl overflow-hidden z-10">
+
+                                            <div className="cooking-dropdown hidden relative w-full mt-2 bg-white border-2 border-orange-300 rounded-lg shadow-2xl overflow-hidden z-10">
                                                 {[
                                                     { value: 'beginner', emoji: '🌱', label: 'Beginner - Just getting started' },
                                                     { value: 'intermediate', emoji: '🔥', label: 'Intermediate - I can cook!' },
@@ -818,7 +833,7 @@ export default function ProfileSetupPage() {
                                                                 })
                                                             }
                                                         }}
-                                                        className={`w-full px-3 sm:px-5 py-3 sm:py-4 text-left text-gray-900 hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-all duration-200 text-xs sm:text-base ${index !== 3 ? 'border-b border-gray-200' : ''} ${formData.cookingLevel === level.value ? 'bg-gradient-to-r from-orange-100 to-pink-100 font-bold' : ''}`}
+                                                        className={`w-full px-4 py-3 text-left text-gray-900 hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-all duration-200 text-sm ${index !== 3 ? 'border-b border-gray-200' : ''} ${formData.cookingLevel === level.value ? 'bg-gradient-to-r from-orange-100 to-pink-100 font-bold' : ''}`}
                                                     >
                                                         <span>{level.emoji} {level.label}</span>
                                                     </button>
@@ -828,94 +843,121 @@ export default function ProfileSetupPage() {
                                     </div>
                                 </>
                             )}
-    
+
                             {step === 4 && (
                                 <>
-                                    <div className="text-center mb-4 sm:mb-6">
-                                        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-1 sm:mb-2">Location & Settings</h2>
-                                        <p className="text-gray-500 text-xs sm:text-sm">Where can we find food for you?</p>
+                                    <div className="text-center mb-6">
+                                        <h2 className="text-xl font-bold text-gray-800 mb-1">Location & Settings</h2>
+                                        <p className="text-gray-500 text-sm">Where can we find food for you?</p>
                                     </div>
-    
-                                    <div className="space-y-3 sm:space-y-4">
-                                        <div>
-                                            <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-2">
-                                                Your location 📍
+
+                                    <div className="space-y-5">
+                                        {/* Location Input Card */}
+                                        <div className="bg-gradient-to-br from-blue-50 via-cyan-50 to-blue-100 rounded-xl p-5 border-2 border-blue-200">
+                                            <label className="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                                <span className="text-lg">📍</span>
+                                                Your Location
                                             </label>
-                                            <div className="flex gap-2 sm:gap-3">
+                                            <div className="flex gap-2">
                                                 <input
                                                     type="text"
                                                     value={formData.location}
                                                     onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                                                    className="flex-1 px-3 sm:px-5 py-2 sm:py-3 border-2 border-gray-200 rounded-lg sm:rounded-2xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-gray-900 bg-white transition-all duration-300 text-xs sm:text-base"
-                                                    placeholder="Enter address"
+                                                    className="flex-1 px-4 py-3 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all text-base placeholder-gray-400"
+                                                    placeholder="123 Main St, City"
                                                     required
                                                 />
-    
                                                 <button
                                                     type="button"
                                                     onClick={handleLocationPermission}
                                                     disabled={locationStatus === 'loading'}
-                                                    className="location-btn px-3 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-rose-500 to-orange-500 text-white rounded-lg sm:rounded-2xl hover:from-rose-600 hover:to-orange-600 transition-all duration-300 font-bold text-lg sm:text-xl shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                                                    className={`location-btn px-5 py-3 rounded-lg font-bold text-lg shadow-lg transform transition-all flex-shrink-0 ${locationStatus === 'success' ? 'bg-green-500 hover:bg-green-600 text-white' :
+                                                        locationStatus === 'error' ? 'bg-red-500 hover:bg-red-600 text-white' :
+                                                            'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white hover:scale-105'
+                                                        } disabled:opacity-50 disabled:cursor-not-allowed`}
                                                 >
                                                     {locationStatus === 'loading' ? '⏳' : locationStatus === 'success' ? '✅' : locationStatus === 'error' ? '❌' : '📍'}
                                                 </button>
                                             </div>
                                             {formData.lat !== 0 && formData.lng !== 0 && (
-                                                <p className="text-xs text-green-600 mt-1.5 sm:mt-2">
-                                                    ✓ Location captured
+                                                <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                                                    <span>✓</span> Location captured ({formData.lat.toFixed(4)}, {formData.lng.toFixed(4)})
                                                 </p>
                                             )}
                                         </div>
-    
-                                        <div>
-                                            <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-2">
-                                                Max distance: {formData.maxDistance} miles 🚗
+
+                                        {/* Distance Slider Card */}
+                                        <div className="bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 rounded-xl p-5 border-2 border-orange-200">
+                                            <label className="block text-sm font-bold text-gray-800 mb-4 flex items-center justify-between">
+                                                <span className="flex items-center gap-2">
+                                                    <span className="text-lg">🚗</span>
+                                                    Search Radius
+                                                </span>
+                                                <span className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+                                                    {formData.maxDistance} mi
+                                                </span>
                                             </label>
-                                            <input
-                                                type="range"
-                                                min="1"
-                                                max="25"
-                                                value={formData.maxDistance}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, maxDistance: parseInt(e.target.value) }))}
-                                                className="w-full h-2 sm:h-3 bg-gray-200 rounded-full appearance-none cursor-pointer accent-rose-500"
-                                            />
-                                        </div>
-    
-                                        <div className="bg-gradient-to-br from-orange-50 to-pink-50 border-2 border-orange-200 rounded-lg sm:rounded-2xl p-3 sm:p-5">
-                                            <label className="flex items-center cursor-pointer group gap-2 sm:gap-4">
+                                            <div className="space-y-2">
                                                 <input
-                                                    type="checkbox"
-                                                    checked={formData.notifications}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, notifications: e.target.checked }))}
-                                                    className="w-5 h-5 rounded border-2 border-orange-300 text-orange-500 focus:ring-2 focus:ring-orange-500 cursor-pointer flex-shrink-0"
+                                                    type="range"
+                                                    min="1"
+                                                    max="25"
+                                                    value={formData.maxDistance}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, maxDistance: parseInt(e.target.value) }))}
+                                                    className="w-full h-7 bg-gradient-to-r from-orange-200 to-amber-200 rounded-full appearance-none cursor-pointer accent-orange-500 slider-thumb"
                                                 />
-                                                <span className="text-gray-700 font-semibold group-hover:text-orange-600 transition-colors text-xs sm:text-base">
+                                                <div className="flex justify-between text-xs text-gray-600 font-semibold">
+                                                    <span>1 mi</span>
+                                                    <span>25 mi</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Notifications Card */}
+                                        <div className="bg-gradient-to-br from-rose-50 via-orange-50 to-rose-100 rounded-xl p-5 border-2 border-rose-200">
+                                            <label className="flex items-center gap-3 cursor-pointer group">
+                                                <div className="relative">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.notifications}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, notifications: e.target.checked }))}
+                                                        className="sr-only peer"
+                                                    />
+                                                    <div className={`w-12 h-7 rounded-full transition-all duration-300 ${formData.notifications
+                                                        ? 'bg-gradient-to-r from-rose-500 to-orange-500'
+                                                        : 'bg-gray-300'
+                                                        }`}></div>
+                                                    <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-all duration-300 ${formData.notifications ? 'translate-x-5' : ''
+                                                        }`}></div>
+                                                </div>
+                                                <span className="text-gray-800 font-semibold group-hover:text-rose-600 transition-colors text-sm">
                                                     🔔 Notify me about nearby food
                                                 </span>
                                             </label>
+                                            <p className="text-xs text-gray-600 ml-15 mt-2">Get instant alerts when food matches your preferences</p>
                                         </div>
                                     </div>
                                 </>
                             )}
                         </div>
-    
-                        {/* Navigation Buttons */}
-                        <div ref={buttonsRef} className="flex justify-between items-center mt-6 sm:mt-8 gap-2 sm:gap-4">
+
+                        {/* Navigation Buttons - Fixed at bottom */}
+                        <div ref={buttonsRef} className="flex justify-between items-center gap-3 flex-shrink-0 mt-6">
                             {step > 1 && (
                                 <button
                                     type="button"
                                     onClick={handlePrevious}
-                                    className="prev-btn flex-1 px-3 sm:px-6 py-2.5 sm:py-4 border-2 border-gray-300 text-gray-700 rounded-lg sm:rounded-2xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 font-bold text-sm sm:text-lg transform hover:scale-105 active:scale-95"
+                                    className="prev-btn flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all font-bold text-sm transform hover:scale-105 active:scale-95"
                                 >
                                     ← Back
                                 </button>
                             )}
-    
+
                             {step < 4 ? (
                                 <button
                                     type="button"
                                     onClick={handleNext}
-                                    className="next-btn flex-1 px-3 sm:px-6 py-2.5 sm:py-4 bg-gradient-to-r from-rose-500 via-orange-500 to-pink-500 text-white rounded-lg sm:rounded-2xl hover:from-rose-600 hover:via-orange-600 hover:to-pink-600 transition-all duration-300 font-bold text-sm sm:text-lg shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+                                    className="next-btn flex-1 px-4 py-3 bg-gradient-to-r from-rose-500 via-orange-500 to-pink-500 text-white rounded-lg hover:from-rose-600 hover:via-orange-600 hover:to-pink-600 transition-all font-bold text-sm shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
                                 >
                                     Next →
                                 </button>
@@ -923,127 +965,107 @@ export default function ProfileSetupPage() {
                                 <button
                                     type="submit"
                                     disabled={saving}
-                                    className="flex-1 px-3 sm:px-6 py-2.5 sm:py-4 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 text-white rounded-lg sm:rounded-2xl hover:from-green-600 hover:via-emerald-600 hover:to-teal-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-sm sm:text-lg shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+                                    className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 text-white rounded-lg hover:from-green-600 hover:via-emerald-600 hover:to-teal-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-bold text-sm shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
                                 >
                                     {saving ? (
                                         <span className="flex items-center justify-center">
-                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 sm:mr-3 sm:h-5 sm:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                             </svg>
-                                            <span className="hidden sm:inline">Creating...</span>
-                                            <span className="sm:hidden">Creating</span>
+                                            Creating...
                                         </span>
                                     ) : (
-                                        <>
-                                            <span className="hidden sm:inline">✨ Complete Profile</span>
-                                            <span className="sm:hidden">✨ Complete</span>
-                                        </>
+                                        '✨ Complete'
                                     )}
                                 </button>
                             )}
                         </div>
                     </form>
                 </div>
-    
-                {/* Fun tip at the bottom */}
-                <div className="text-center mt-4 sm:mt-6 text-gray-600 text-xs sm:text-sm px-2">
-                    <span
-                        key={randomTip}
-                        className="tip-container inline-block bg-white/80 backdrop-blur-sm px-3 sm:px-6 py-2 sm:py-3 rounded-full shadow-lg border border-white/60"
-                    >
-                        {randomTip}
-                    </span>
-                </div>
             </div>
-    
+
             <style jsx>{`
-                @keyframes blob {
-                  0%, 100% { transform: translate(0, 0) scale(1); }
-                  33% { transform: translate(30px, -50px) scale(1.1); }
-                  66% { transform: translate(-20px, 20px) scale(0.9); }
-                }
-                
-                .animate-blob {
-                  animation: blob 7s infinite;
-                }
-                
-                .animation-delay-2000 {
-                  animation-delay: 2s;
-                }
-                
-                .animation-delay-4000 {
-                  animation-delay: 4s;
-                }
-    
-                input[type="range"]::-webkit-slider-thumb {
-                  appearance: none;
-                  width: 18px;
-                  height: 18px;
-                  border-radius: 50%;
-                  background: linear-gradient(135deg, #f43f5e, #fb923c);
-                  cursor: pointer;
-                  box-shadow: 0 2px 8px rgba(244, 63, 94, 0.4);
-                  transition: transform 0.2s;
-                }
-    
-                input[type="range"]::-webkit-slider-thumb:hover {
-                  transform: scale(1.2);
-                }
-    
-                input[type="range"]::-moz-range-thumb {
-                  width: 18px;
-                  height: 18px;
-                  border-radius: 50%;
-                  background: linear-gradient(135deg, #f43f5e, #fb923c);
-                  cursor: pointer;
-                  border: none;
-                  box-shadow: 0 2px 8px rgba(244, 63, 94, 0.4);
-                }
-    
-                input[type="range"]::-moz-range-thumb:hover {
-                  transform: scale(1.2);
-                }
-    
-                .tip-container {
-                  position: relative;
-                }
-    
-                .tip-container::before {
-                  content: '';
-                  position: absolute;
-                  top: -2px;
-                  left: -2px;
-                  right: -2px;
-                  bottom: -2px;
-                  background: linear-gradient(135deg, #f43f5e20, #fb923c20);
-                  border-radius: inherit;
-                  z-index: -1;
-                  opacity: 0;
-                  transition: opacity 0.3s ease;
-                }
-    
-                .tip-container:hover::before {
-                  opacity: 1;
-                }
-    
-                /* Mobile text truncation */
-                @media (max-width: 640px) {
-                  .line-clamp-2 {
-                    display: -webkit-box;
-                    -webkit-line-clamp: 2;
-                    -webkit-box-orient: vertical;
-                    overflow: hidden;
-                  }
-    
-                  .line-clamp-1 {
-                    display: -webkit-box;
-                    -webkit-line-clamp: 1;
-                    -webkit-box-orient: vertical;
-                    overflow: hidden;
-                  }
-                }
-            `}</style>
+        @keyframes blob {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+        
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+  
+        input[type="range"]::-webkit-slider-thumb {
+          appearance: none;
+          width: 35px;
+          height: 35px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #f43f5e, #fb923c);
+          cursor: pointer;
+          box-shadow: 0 2px 8px rgba(244, 63, 94, 0.4);
+        }
+  
+        input[type="range"]::-moz-range-thumb {
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #f43f5e, #fb923c);
+          cursor: pointer;
+          border: none;
+          box-shadow: 0 2px 8px rgba(244, 63, 94, 0.4);
+        }
+          
+          .slider-thumb::-webkit-slider-thumb {
+    appearance: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f97316, #fbbf24);
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+    border: 4px solid white;
+    touch-action: manipulation;
+}
+
+.slider-thumb::-moz-range-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f97316, #fbbf24);
+    cursor: pointer;
+    border: 4px solid white;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.slider-thumb::-moz-range-track {
+    background: transparent;
+    border: none;
+}
+
+        
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+  
+        .line-clamp-1 {
+          display: -webkit-box;
+          -webkit-line-clamp: 1;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      `}</style>
         </div>
     )
 }
