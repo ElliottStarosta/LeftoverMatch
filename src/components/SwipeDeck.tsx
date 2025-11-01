@@ -376,17 +376,16 @@ useEffect(() => {
     if (currentPost.status !== 'available') {
       console.log('❌ Post not available:', currentPost.status)
       alert('This food is no longer available')
-      setCurrentIndex(prev => prev + 1)
+      handleSwipeLeft()
       return
     }
 
     console.log('➡️ Swiping right on:', currentPost.title)
     setClaiming(true)
     setSwipeDirection('right')
-    setCurrentIndex(prev => prev + 1)
+    // setCurrentIndex(prev => prev + 1)
 
 
-    // ✅ CHECK DAILY CLAIM LIMIT FIRST
     try {
       const { canClaim, claimsToday, maxClaims, resetTime } = await checkDailyClaimLimit(user.uid)
 
@@ -458,7 +457,6 @@ useEffect(() => {
       const claimId = await createClaim(user.uid, currentPost.id, currentPost.userId)
       console.log('✅ Claim created:', claimId)
 
-      // ✅ INCREMENT DAILY CLAIM COUNT
       try {
         await incrementDailyClaimCount(user.uid)
         console.log('✅ Daily claim count incremented')
@@ -500,6 +498,7 @@ useEffect(() => {
     setSelectedPost(null)
 
     // Move to next card
+    setCurrentIndex(prev => prev + 1)
     x.set(0)
     y.set(0)
   }

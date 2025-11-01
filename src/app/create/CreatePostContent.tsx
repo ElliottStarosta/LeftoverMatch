@@ -102,7 +102,7 @@ async function createRandomFoodPosts() {
     const pickupEnd = new Date(pickupStart.getTime() + 2 * 60 * 60 * 1000) // 2 hours after start
     
     const postData = {
-      userId: 'H9R4YpVu8HcwMHJwir3FTdo1Ftz2',
+      userId: 'jCas8ArbvfR2u9MB8HvBnIIYhoc2',
       title: food.title,
       description: food.description,
       photoUrl: food.photoUrl,
@@ -740,7 +740,7 @@ export default function CreatePostPage() {
               value={formData.description} 
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} 
               className="w-full text-base text-gray-900 bg-transparent border-0 focus:outline-none resize-none placeholder-gray-400" 
-              placeholder="How many slices, any special details..." 
+              placeholder="Any special details..." 
               rows={2} 
               required 
             />
