@@ -39,11 +39,11 @@ export default function CustomDateTimePicker({
 
     useEffect(() => {
         if (value) {
-            const [date, time] = value.split('T')
-            setTempDate(date)
-            setTempTime(time)
+          const [date, time] = value.split('T')
+          setTempDate(date)
+          setTempTime(time)
         }
-    }, [value])
+      }, [value])
 
     const formatDisplayDate = (dateTimeString: string) => {
         if (!dateTimeString) return 'Select date & time'

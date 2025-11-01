@@ -17,6 +17,7 @@ import {
   ChevronLeftIcon
 } from '@heroicons/react/24/outline'
 import { HeartIcon } from '@heroicons/react/24/solid'
+import { DirectionsMap } from '@/components/DirectionsMap'
 
 interface Conversation {
   id: string
@@ -111,13 +112,13 @@ export default function MessagesContent() {
 
   useEffect(() => {
     if (!selectedConversation) return
-  
+
     const db = getDb()
     if (!db) return
-  
+
     import('firebase/firestore').then(({ doc, onSnapshot }) => {
       const conversationRef = doc(db, 'conversations', selectedConversation.id)
-  
+
       const unsubscribe = onSnapshot(conversationRef, (snapshot) => {
         if (!snapshot.exists()) {
           // Conversation was deleted, redirect to home
@@ -125,7 +126,7 @@ export default function MessagesContent() {
           router.push('/')
         }
       })
-  
+
       return () => unsubscribe()
     })
   }, [selectedConversation, router])
@@ -501,7 +502,7 @@ export default function MessagesContent() {
 
     setAccepting(true)
 
-    setSelectedConversation(prev => 
+    setSelectedConversation(prev =>
       prev ? { ...prev, claimAccepted: true } : null
     )
 
@@ -561,7 +562,7 @@ export default function MessagesContent() {
     } catch (error) {
       console.error('Error accepting claim:', error)
       alert('Failed to accept claim')
-      setSelectedConversation(prev => 
+      setSelectedConversation(prev =>
         prev ? { ...prev, claimAccepted: false } : null
       )
     } finally {
@@ -581,11 +582,11 @@ export default function MessagesContent() {
   const handleGetDirections = () => {
     if (!selectedConversation?.postLocation) return
     const address = selectedConversation.postLocation
-    
+
     // Detect if iOS or Android
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
     const isAndroid = /Android/.test(navigator.userAgent)
-    
+
     if (isIOS) {
       // Apple Maps - use maps:// scheme
       window.location.href = `maps://?address=${encodeURIComponent(address)}`
@@ -609,7 +610,7 @@ export default function MessagesContent() {
     setShowChatView(false)
     setSelectedConversation(null)
     setMessages([])
-    
+
     // Check if we came from a URL parameter
     const conversationId = searchParams.get('conversation')
     if (conversationId) {
@@ -618,7 +619,7 @@ export default function MessagesContent() {
     }
   }
 
-  
+
 
   if (authLoading || loading) {
     return (
@@ -641,9 +642,9 @@ export default function MessagesContent() {
   const isPoster = selectedConversation?.posterId === authUser.uid
 
   const isOtherUserTyping = selectedConversation && otherUserId &&
-  typingStatus[selectedConversation.id]?.[otherUserId] &&
-  typeof typingStatus[selectedConversation.id][otherUserId] === 'number' &&
-  (Date.now() - typingStatus[selectedConversation.id][otherUserId]) < 2000
+    typingStatus[selectedConversation.id]?.[otherUserId] &&
+    typeof typingStatus[selectedConversation.id][otherUserId] === 'number' &&
+    (Date.now() - typingStatus[selectedConversation.id][otherUserId]) < 2000
 
   // MOBILE LAYOUT
   const DirectionsModal = () => {
@@ -667,11 +668,8 @@ export default function MessagesContent() {
           </div>
 
           {/* Map Preview */}
-          <div className="bg-gradient-to-br from-orange-100 to-pink-100 rounded-2xl p-4 h-48 flex items-center justify-center border-2 border-orange-200">
-            <div className="text-center">
-              <div className="text-5xl mb-2">📍</div>
-              <p className="text-sm font-semibold text-gray-900 text-center">{address}</p>
-            </div>
+          <div className="bg-gradient-to-br from-orange-100 to-pink-100 rounded-2xl overflow-hidden border-2 border-orange-200 h-48 w-full">
+            <DirectionsMap destinationAddress={selectedConversation.postLocation!} />
           </div>
 
           {/* Navigation Options */}
@@ -742,12 +740,9 @@ export default function MessagesContent() {
       </div>
     )
   }
-  
-
   if (isMobile) {
     // Show chat view
     if (showChatView && selectedConversation) {
-
       return (
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-pink-50 flex flex-col">
           {/* Chat Header */}
@@ -755,6 +750,7 @@ export default function MessagesContent() {
             <button
               onClick={handleBackToList}
               className="p-2 -ml-2 hover:bg-white/20 rounded-full transition-colors transform hover:scale-110 active:scale-95"
+              type="button"
             >
               <ChevronLeftIcon className="w-6 h-6 text-white" />
             </button>
@@ -782,13 +778,13 @@ export default function MessagesContent() {
               </div>
             )}
           </div>
-
+  
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-gradient-to-br from-orange-50/50 to-pink-50/50">
             {messages.map((msg, idx) => {
               const isOwn = msg.senderId === authUser.uid
               const isSystem = msg.type === 'system'
-
+  
               if (isSystem) {
                 return (
                   <div key={msg.id} className="flex justify-center py-2">
@@ -798,16 +794,14 @@ export default function MessagesContent() {
                   </div>
                 )
               }
-
+  
               return (
                 <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className={`message-bubble max-w-[80%] px-4 py-3 rounded-2xl shadow-md transition-all transform hover:scale-105 ${
-                      isOwn
-                        ? 'bg-gradient-to-br from-green-500 to-emerald-500 text-white rounded-br-none'
-                        : 'bg-white text-gray-900 rounded-bl-none border border-orange-100'
-                    }`}
-                    
+                    className={`message-bubble max-w-[80%] px-4 py-3 rounded-2xl shadow-md transition-all transform hover:scale-105 ${isOwn
+                      ? 'bg-gradient-to-br from-green-500 to-emerald-500 text-white rounded-br-none'
+                      : 'bg-white text-gray-900 rounded-bl-none border border-orange-100'
+                      }`}
                   >
                     <p className="text-sm break-words">{msg.text}</p>
                     <p className={`text-xs mt-1 ${isOwn ? 'text-white/70' : 'text-gray-500'}`}>
@@ -817,7 +811,7 @@ export default function MessagesContent() {
                 </div>
               )
             })}
-
+  
             {isOtherUserTyping && (
               <div className="flex justify-start">
                 <div className="message-bubble bg-white px-4 py-3 rounded-2xl rounded-bl-none shadow-md border border-orange-100">
@@ -829,10 +823,10 @@ export default function MessagesContent() {
                 </div>
               </div>
             )}
-
+  
             <div ref={messagesEndRef} />
           </div>
-
+  
           {/* Accept Claim Button */}
           {isPoster && !isClaimAccepted && selectedConversation && !selectedConversation.claimAccepted && (
             <div className="action-button px-4 py-3 bg-gradient-to-r from-green-100 to-emerald-100 border-t-2 border-green-300">
@@ -840,6 +834,7 @@ export default function MessagesContent() {
                 onClick={handleAcceptClaim}
                 disabled={accepting}
                 className="accept-button w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 px-4 rounded-2xl font-bold active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 transition-transform shadow-lg hover:shadow-xl transform hover:scale-105"
+                type="button"
               >
                 {accepting ? (
                   <>
@@ -855,13 +850,14 @@ export default function MessagesContent() {
               </button>
             </div>
           )}
-
+  
           {/* Get Directions & Complete */}
           {!isPoster && isClaimAccepted && selectedConversation.postLocation && (
             <div className="action-button px-4 py-3 bg-gradient-to-r from-blue-100 to-cyan-100 border-t-2 border-blue-300 space-y-2">
               <button
                 onClick={() => setShowDirectionsModal(true)}
                 className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 px-4 rounded-2xl font-bold active:scale-95 flex items-center justify-center gap-2 transition-transform shadow-lg hover:shadow-xl transform hover:scale-105"
+                type="button"
               >
                 <MapPinIcon className="w-5 h-5" />
                 Get Directions
@@ -869,13 +865,14 @@ export default function MessagesContent() {
               <button
                 onClick={handleCompletePickup}
                 className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 px-4 rounded-2xl font-bold active:scale-95 flex items-center justify-center gap-2 transition-transform shadow-lg hover:shadow-xl transform hover:scale-105"
+                type="button"
               >
                 <CheckIcon className="w-5 h-5" />
                 Complete Pickup
               </button>
             </div>
           )}
-
+  
           {/* Message Input */}
           <form onSubmit={handleSendMessage} className="message-input-container px-4 py-3 bg-white border-t-2 border-orange-200 shadow-lg">
             <div className="flex gap-2 items-center">
@@ -887,7 +884,7 @@ export default function MessagesContent() {
                   handleTyping()
                 }}
                 placeholder="Message..."
-                className="message-input flex-1 px-4 py-3 bg-gradient-to-br from-orange-50 to-amber-50 rounded-full focus:outline-none text-base text-gray-900 placeholder-gray-500 border border-orange-200 focus:border-orange-500 transition-all"                
+                className="message-input flex-1 px-4 py-3 bg-gradient-to-br from-orange-50 to-amber-50 rounded-full focus:outline-none text-base text-gray-900 placeholder-gray-500 border border-orange-200 focus:border-orange-500 transition-all"
                 disabled={sending}
               />
               <button
@@ -899,7 +896,102 @@ export default function MessagesContent() {
               </button>
             </div>
           </form>
-
+  
+          {/* Directions Modal */}
+          {showDirectionsModal && selectedConversation?.postLocation && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
+              <div className="w-full bg-white rounded-t-3xl p-4 space-y-4 animate-in slide-in-from-bottom">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-lg text-gray-900">Get Directions</h3>
+                  <button
+                    onClick={() => setShowDirectionsModal(false)}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    type="button"
+                  >
+                    ✕
+                  </button>
+                </div>
+  
+                {/* Map Preview */}
+                <div className="bg-gradient-to-br from-orange-100 to-pink-100 rounded-2xl overflow-hidden border-2 border-orange-200 h-48 w-full">
+                  <DirectionsMap destinationAddress={selectedConversation.postLocation} />
+                </div>
+  
+                {/* Navigation Options */}
+                <div className="space-y-2">
+                  {/iPad|iPhone|iPod/.test(navigator.userAgent) ? (
+                    <>
+                      <button
+                        onClick={() => {
+                          window.location.href = `maps://?address=${encodeURIComponent(selectedConversation.postLocation!)}`
+                          setShowDirectionsModal(false)
+                        }}
+                        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-4 px-4 rounded-2xl font-bold active:scale-95 flex items-center justify-center gap-2 transition-transform shadow-lg hover:shadow-xl"
+                        type="button"
+                      >
+                        🗺️ Open in Apple Maps
+                      </button>
+                      <button
+                        onClick={() => {
+                          window.open(`https://www.google.com/maps/search/${encodeURIComponent(selectedConversation.postLocation!)}`, '_blank')
+                          setShowDirectionsModal(false)
+                        }}
+                        className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-4 px-4 rounded-2xl font-bold active:scale-95 flex items-center justify-center gap-2 transition-transform shadow-lg hover:shadow-xl"
+                        type="button"
+                      >
+                        🔴 Open in Google Maps
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => {
+                          window.location.href = `geo:0,0?q=${encodeURIComponent(selectedConversation.postLocation!)}`
+                          setShowDirectionsModal(false)
+                        }}
+                        className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-4 px-4 rounded-2xl font-bold active:scale-95 flex items-center justify-center gap-2 transition-transform shadow-lg hover:shadow-xl"
+                        type="button"
+                      >
+                        🗺️ Open in Google Maps
+                      </button>
+                      <button
+                        onClick={() => {
+                          window.open(`https://www.google.com/maps/search/${encodeURIComponent(selectedConversation.postLocation!)}`, '_blank')
+                          setShowDirectionsModal(false)
+                        }}
+                        className="w-full bg-gradient-to-r from-gray-500 to-gray-600 text-white py-4 px-4 rounded-2xl font-bold active:scale-95 flex items-center justify-center gap-2 transition-transform shadow-lg hover:shadow-xl"
+                        type="button"
+                      >
+                        🌐 Open in Browser
+                      </button>
+                    </>
+                  )}
+                </div>
+  
+                {/* Copy Address Button */}
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(selectedConversation.postLocation!)
+                    alert('Address copied!')
+                  }}
+                  className="w-full bg-gradient-to-r from-gray-100 to-gray-200 text-gray-900 py-3 px-4 rounded-2xl font-semibold active:scale-95 transition-transform"
+                  type="button"
+                >
+                  📋 Copy Address
+                </button>
+  
+                <button
+                  onClick={() => setShowDirectionsModal(false)}
+                  className="w-full bg-gray-200 text-gray-900 py-3 px-4 rounded-2xl font-semibold active:scale-95 transition-transform"
+                  type="button"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+  
           {showRatingModal && otherUser && (
             <RatingModal
               conversationId={selectedConversation.id}
@@ -916,7 +1008,7 @@ export default function MessagesContent() {
         </div>
       )
     }
-
+  
     // Show conversations list
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-pink-50 flex flex-col">
@@ -924,10 +1016,9 @@ export default function MessagesContent() {
         <div className="conversations-header bg-gradient-to-r from-orange-500 via-pink-500 to-rose-500 px-4 py-4 sticky top-0 z-10 shadow-lg">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => {
-                router.push('/')
-              } }
+              onClick={() => router.push('/')}
               className="p-2 -ml-2 hover:bg-white/20 rounded-full transition-colors transform hover:scale-110 active:scale-95"
+              type="button"
             >
               <ChevronLeftIcon className="w-6 h-6 text-white" />
             </button>
@@ -935,7 +1026,7 @@ export default function MessagesContent() {
             <div className="w-10"></div>
           </div>
         </div>
-
+  
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto px-3 py-4">
           {conversations.length === 0 ? (
@@ -949,12 +1040,13 @@ export default function MessagesContent() {
               {conversations.map((convo) => {
                 const other = convo.participants.find(id => id !== authUser.uid)
                 const otherData = other ? userData[other] : null
-
+  
                 return (
                   <button
                     key={convo.id}
                     onClick={() => handleSelectConversation(convo)}
                     className="conversation-card w-full p-4 rounded-2xl bg-white border-2 border-orange-100 hover:border-orange-300 active:bg-orange-50 transition-all shadow-md hover:shadow-lg transform hover:scale-[1.02] active:scale-95"
+                    type="button"
                   >
                     <div className="flex gap-3 items-center">
                       <div className="relative w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-orange-200 shadow-md transform hover:scale-110 transition-transform">
@@ -1043,11 +1135,10 @@ export default function MessagesContent() {
                     <button
                       key={convo.id}
                       onClick={() => handleSelectConversation(convo)}
-                      className={`w-full p-4 rounded-xl transition-all duration-200 mb-2 ${
-                        isSelected
-                          ? 'bg-gradient-to-r from-orange-100 to-pink-100 shadow-lg'
-                          : 'hover:bg-gray-50 active:scale-95'
-                      }`}
+                      className={`w-full p-4 rounded-xl transition-all duration-200 mb-2 ${isSelected
+                        ? 'bg-gradient-to-r from-orange-100 to-pink-100 shadow-lg'
+                        : 'hover:bg-gray-50 active:scale-95'
+                        }`}
                     >
                       <div className="flex gap-3 items-center">
                         <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
@@ -1138,11 +1229,10 @@ export default function MessagesContent() {
                     return (
                       <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                         <div
-                          className={`max-w-[75%] px-4 py-2.5 rounded-2xl ${
-                            isOwn
-                              ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white'
-                              : 'bg-white text-gray-800 shadow-sm'
-                          }`}
+                          className={`max-w-[75%] px-4 py-2.5 rounded-2xl ${isOwn
+                            ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white'
+                            : 'bg-white text-gray-800 shadow-sm'
+                            }`}
                         >
                           <p className="text-sm">{msg.text}</p>
                           <p className={`text-xs mt-1 ${isOwn ? 'text-white/70' : 'text-gray-500'}`}>

@@ -1,14 +1,16 @@
 'use client'
 
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/useAuth'
+import { useIsMounted } from '@/lib/useIsMounted'
 import Navbar from '@/components/Navbar'
 import SwipeDeck from '@/components/SwipeDeck'
 
 export default function HomeContent() {
   const { user, loading, error } = useAuth()
   const router = useRouter()
+  const isMounted = useIsMounted()
 
   useEffect(() => {
     if (!loading && !user) {
@@ -16,10 +18,21 @@ export default function HomeContent() {
     }
   }, [user, loading, router])
 
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-green-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center" suppressHydrationWarning>
-        <div className="text-center" suppressHydrationWarning>
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center">
+        <div className="text-center">
           <div className="text-6xl mb-4">⚠️</div>
           <h1 className="text-2xl font-bold text-red-600 mb-4">Authentication Error</h1>
           <p className="text-gray-600 mb-6">
@@ -38,9 +51,9 @@ export default function HomeContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-green-50 flex items-center justify-center" suppressHydrationWarning>
-        <div className="text-center" suppressHydrationWarning>
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4" suppressHydrationWarning></div>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-green-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -52,15 +65,15 @@ export default function HomeContent() {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-orange-50 to-green-50 flex flex-col overflow-hidden" suppressHydrationWarning>
+    <div className="h-screen bg-gradient-to-br from-orange-50 to-green-50 flex flex-col overflow-hidden">
       <Navbar />
       
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-2" suppressHydrationWarning>
-        <div className="w-full max-w-sm h-full max-h-[calc(100vh-120px)]" suppressHydrationWarning>
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-2">
+        <div className="w-full max-w-sm h-full max-h-[calc(100vh-120px)]">
           <Suspense fallback={
-            <div className="flex items-center justify-center h-full bg-white rounded-2xl shadow-lg" suppressHydrationWarning>
-              <div className="text-center" suppressHydrationWarning>
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4" suppressHydrationWarning></div>
+            <div className="flex items-center justify-center h-full bg-white rounded-2xl shadow-lg">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
                 <p className="text-gray-600">Loading food posts...</p>
               </div>
             </div>

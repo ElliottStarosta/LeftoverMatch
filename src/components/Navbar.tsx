@@ -30,13 +30,13 @@ export default function Navbar() {
   const [showMenu, setShowMenu] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [mounted, setMounted] = useState(false)
   const { user, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const menuRef = useRef<HTMLDivElement>(null)
   const notifRef = useRef<HTMLDivElement>(null)
   const navRef = useRef<HTMLDivElement>(null)
-  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -207,7 +207,24 @@ export default function Navbar() {
     { icon: UserCircleIcon, label: 'Profile', href: '/profile', color: 'from-purple-500 to-indigo-500' },
   ]
 
-  if (!mounted) return null
+  if (!mounted) {
+    return (
+      <nav className="bg-white/95 backdrop-blur-xl shadow-lg border-b border-orange-100 sticky top-0 z-40">
+        <div className="container mx-auto px-4">
+          <div className="flex justify-between items-center h-16">
+            <Link href="/" className="hidden sm:flex items-center space-x-2 group">
+              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                <span className="text-white font-bold text-xl">🍽️</span>
+              </div>
+              <span className="font-bold text-xl bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
+                ReSwipe
+              </span>
+            </Link>
+          </div>
+        </div>
+      </nav>
+    )
+  }
 
   return (
     <>

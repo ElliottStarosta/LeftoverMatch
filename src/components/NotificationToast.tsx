@@ -49,12 +49,10 @@ export default function NotificationToast() {
               createdAt: doc.data().createdAt?.toDate?.() || new Date()
             }
 
-            // Only show if different from current toast
             if (!toast || toast.id !== notification.id) {
               setToast(notification)
               setIsVisible(true)
 
-              // Auto-hide after 4 seconds
               const timer = setTimeout(() => {
                 setIsVisible(false)
                 setTimeout(() => setToast(null), 300)
@@ -80,7 +78,6 @@ export default function NotificationToast() {
     setIsVisible(false)
     setTimeout(() => setToast(null), 300)
 
-    // Delete notification from Firebase
     try {
       const db = getDb()
       if (!db) return
@@ -92,7 +89,6 @@ export default function NotificationToast() {
     }
   }
 
-  // Handle notification click - navigate to conversation
   const handleNotificationClick = async () => {
     if (!toast?.conversationId) {
       console.log('No conversation ID:', toast)
@@ -101,7 +97,6 @@ export default function NotificationToast() {
 
     console.log('Navigating to conversation:', toast.conversationId)
 
-    // Delete notification immediately
     try {
       const db = getDb()
       if (!db) return
@@ -112,19 +107,15 @@ export default function NotificationToast() {
       console.error('Error deleting notification:', error)
     }
 
-    // Dismiss the toast
     setIsVisible(false)
     setToast(null)
     
-    // Navigate to messages with conversation param
     setTimeout(() => {
       router.push(`/messages?conversation=${toast.conversationId}`)
       setTimeout(() => {
         router.push('/messages')
-      }, 1000) // wait 1000 ms before going to /messages
+      }, 1000)
     }, 100)
-    
-    
   }
 
   const getNotificationIcon = (type: string) => {
@@ -161,9 +152,9 @@ export default function NotificationToast() {
 
   return (
     <div className="fixed bottom-6 right-4 z-50 sm:bottom-8 sm:right-6 pointer-events-none">
-      <button
+      <div
         onClick={handleNotificationClick}
-        className={`pointer-events-auto bg-white rounded-xl shadow-lg border-l-4 ${getBorderColor(toast.type)} p-4 max-w-xs transition-all duration-300 transform hover:shadow-xl active:scale-95 w-full text-left ${
+        className={`pointer-events-auto bg-white rounded-xl shadow-lg border-l-4 ${getBorderColor(toast.type)} p-4 max-w-xs transition-all duration-300 transform hover:shadow-xl active:scale-95 w-full text-left cursor-pointer ${
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
         }`}
       >
@@ -183,11 +174,13 @@ export default function NotificationToast() {
               dismissNotification()
             }}
             className="flex-shrink-0 p-1 hover:bg-gray-100 rounded transition-colors"
+            type="button"
+            aria-label="Close notification"
           >
             <XMarkIcon className="w-4 h-4 text-gray-400" />
           </button>
         </div>
-      </button>
+      </div>
     </div>
   )
 }
