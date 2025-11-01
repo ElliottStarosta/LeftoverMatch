@@ -8,8 +8,8 @@ import { signOut } from 'firebase/auth'
 import { User } from '@/types'
 import { gsap } from 'gsap'
 import LoadingSpinner from '../../components/LoadingSpinner'
-import { 
-  StarIcon, 
+import {
+  StarIcon,
   ArrowLeftIcon,
   PencilIcon,
   CheckIcon,
@@ -97,7 +97,7 @@ export default function ProfileContent() {
     if (!mounted || !cardRef.current || loading) return
 
     const tl = gsap.timeline()
-    
+
     tl.fromTo(cardRef.current,
       { scale: 0.9, opacity: 0, y: 30 },
       { scale: 1, opacity: 1, y: 0, duration: 0.6, ease: 'back.out(1.7)' }
@@ -170,22 +170,22 @@ export default function ProfileContent() {
 
   const handleDeleteAccount = async () => {
     if (!authUser) return
-    
+
     setDeleting(true)
-  
+
     try {
       const db = getDb()
       if (!db) throw new Error('Database not available')
-  
+
       const { doc, deleteDoc, collection, query, where, getDocs } = await import('firebase/firestore')
       const { EmailAuthProvider, GoogleAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup } = await import('firebase/auth')
-  
+
       const auth = getAuth()
       if (!auth) throw new Error('Auth not available')
-  
+
       // Check the sign-in method
       const providerData = authUser.providerData[0]
-      
+
       if (providerData?.providerId === 'google.com') {
         // Reauthenticate with Google
         const provider = new GoogleAuthProvider()
@@ -198,33 +198,33 @@ export default function ProfileContent() {
           setShowDeleteModal(false)
           return
         }
-        
+
         if (authUser.email) {
           const credential = EmailAuthProvider.credential(authUser.email, password)
           await reauthenticateWithCredential(authUser, credential)
         }
       }
-  
+
       // Delete user data from Firestore
       await deleteDoc(doc(db, 'users', authUser.uid))
-  
+
       // Delete user's posts
       const postsQuery = query(collection(db, 'posts'), where('userId', '==', authUser.uid))
       const postsSnapshot = await getDocs(postsQuery)
       for (const postDoc of postsSnapshot.docs) {
         await deleteDoc(postDoc.ref)
       }
-  
+
       // Delete user's claims
       const claimsQuery = query(collection(db, 'claims'), where('claimerId', '==', authUser.uid))
       const claimsSnapshot = await getDocs(claimsQuery)
       for (const claimDoc of claimsSnapshot.docs) {
         await deleteDoc(claimDoc.ref)
       }
-  
+
       // Delete auth account
       await authUser.delete()
-  
+
       router.push('/auth')
     } catch (error: any) {
       console.error('Error deleting account:', error)
@@ -419,7 +419,7 @@ export default function ProfileContent() {
               </div>
               <p className="text-xs text-gray-600 mb-1">Trust Score</p>
               <p className="text-sm font-bold text-gray-900">
-                {userData.totalRatings && userData.totalRatings > 0 
+                {userData.totalRatings && userData.totalRatings > 0
                   ? `${(userData.trustScore * 5).toFixed(1)} (${userData.totalRatings})`
                   : 'No ratings'
                 }
@@ -469,11 +469,10 @@ export default function ProfileContent() {
                       key={option.value}
                       type="button"
                       onClick={() => toggleOption('dietaryRestrictions', option.value)}
-                      className={`p-3 rounded-xl border-2 transition-all transform hover:scale-105 ${
-                        editData.dietaryRestrictions.includes(option.value)
+                      className={`p-3 rounded-xl border-2 transition-all transform hover:scale-105 ${editData.dietaryRestrictions.includes(option.value)
                           ? 'bg-gradient-to-br from-orange-500 to-pink-500 border-orange-500 text-white shadow-lg'
                           : 'bg-white border-gray-200 text-gray-700 hover:border-orange-300'
-                      }`}
+                        }`}
                     >
                       <div className="text-2xl mb-1">{option.emoji}</div>
                       <div className="text-xs font-semibold">{option.value}</div>
@@ -505,11 +504,10 @@ export default function ProfileContent() {
                       key={pref.value}
                       type="button"
                       onClick={() => toggleOption('foodPreferences', pref.value)}
-                      className={`p-3 rounded-xl border-2 transition-all transform hover:scale-105 ${
-                        editData.foodPreferences.includes(pref.value)
-                          ? 'bg-gradient-to-br from-blue-500 to-cyan-500 border-blue-500 text-white shadow-lg'
-                          : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'
-                      }`}
+                      className={`p-3 rounded-xl border-2 transition-all transform hover:scale-105 ${editData.foodPreferences.includes(pref.value)
+                          ? 'bg-gradient-to-br from-orange-500 to-pink-500 border-orange-500 text-white shadow-lg'
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-orange-300'
+                        }`}
                     >
                       <div className="text-2xl mb-1">{pref.emoji}</div>
                       <div className="text-xs font-semibold">{pref.value}</div>
@@ -520,7 +518,7 @@ export default function ProfileContent() {
                 <div className="flex flex-wrap gap-2">
                   {userData.foodPreferences?.length ? (
                     userData.foodPreferences.map((pref) => (
-                      <span key={pref} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                      <span key={pref} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-semibold">
                         {pref}
                       </span>
                     ))
@@ -541,11 +539,10 @@ export default function ProfileContent() {
                       key={allergy.value}
                       type="button"
                       onClick={() => toggleOption('allergies', allergy.value)}
-                      className={`p-3 rounded-xl border-2 transition-all transform hover:scale-105 ${
-                        editData.allergies.includes(allergy.value)
+                      className={`p-3 rounded-xl border-2 transition-all transform hover:scale-105 ${editData.allergies.includes(allergy.value)
                           ? 'bg-gradient-to-br from-red-500 to-orange-500 border-red-500 text-white shadow-lg'
                           : 'bg-white border-gray-200 text-gray-700 hover:border-red-300'
-                      }`}
+                        }`}
                     >
                       <div className="text-2xl mb-1">{allergy.emoji}</div>
                       <div className="text-xs font-semibold">{allergy.value}</div>
