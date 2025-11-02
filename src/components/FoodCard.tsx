@@ -6,6 +6,7 @@ import { MapPinIcon, ClockIcon, UserIcon, XMarkIcon, InformationCircleIcon } fro
 import { StarIcon } from '@heroicons/react/24/solid'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlgorithmPost } from '@/lib/algorithm'
+import { useRouter } from 'next/navigation'
 
 interface FoodCardProps {
   post: AlgorithmPost
@@ -16,6 +17,7 @@ export default function FoodCard({ post, onDetailsModalChange }: FoodCardProps) 
   const [imageLoaded, setImageLoaded] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
 
+  const router = useRouter()
 
   useEffect(() => {
     onDetailsModalChange?.(showDetails)
@@ -35,6 +37,10 @@ export default function FoodCard({ post, onDetailsModalChange }: FoodCardProps) 
     return stars
   }
 
+  const handlePosterClick = () => {
+    router.push(`/profile/${post.userId}`)
+  }
+
   const getTimeAgo = (date: Date | any) => {
     const dateObj = date instanceof Date ? date : date.toDate()
     const now = new Date()
@@ -48,10 +54,10 @@ export default function FoodCard({ post, onDetailsModalChange }: FoodCardProps) 
   return (
     <>
       <div
-        className="bg-white rounded-3xl shadow-2xl overflow-hidden h-full flex flex-col relative"  style={{ 
+        className="bg-white rounded-3xl shadow-2xl overflow-hidden h-full flex flex-col relative" style={{
           touchAction: showDetails ? 'pan-y' : 'none',
           pointerEvents: showDetails ? 'none' : 'auto'
-        }} 
+        }}
       >
         {/* Main Image */}
         <div className="relative flex-1 min-h-0 bg-gray-200">
@@ -201,22 +207,26 @@ export default function FoodCard({ post, onDetailsModalChange }: FoodCardProps) 
                 {/* Poster Info */}
                 <div className="bg-gray-50 rounded-2xl p-4 mb-6">
                   <h3 className="font-semibold text-gray-900 mb-3">About the poster</h3>
-                  <div className="flex items-center gap-3 mb-3">
+                  <button
+                    onClick={() => router.push(`/profile/${post.userId}`)}
+                    className="w-full flex items-center gap-3 mb-3 hover:opacity-80 transition-opacity active:scale-95"
+                    type="button"
+                  >
                     {post.posterAvatar ? (
                       <Image
                         src={post.posterAvatar}
                         alt={post.posterName}
                         width={48}
                         height={48}
-                        className="rounded-full"
+                        className="rounded-full cursor-pointer hover:ring-2 hover:ring-orange-400 transition-all flex-shrink-0"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-orange-400 transition-all flex-shrink-0">
                         <UserIcon className="w-6 h-6 text-gray-600" />
                       </div>
                     )}
-                    <div>
-                      <p className="font-semibold text-gray-900">{post.posterName}</p>
+                    <div className="text-left flex-1">
+                      <p className="font-semibold text-gray-900 hover:text-orange-600 transition-colors">{post.posterName}</p>
                       <div className="flex items-center gap-1">
                         {getTrustStars(post.posterTrustScore)}
                         <span className="text-sm text-gray-600 ml-1">
@@ -227,9 +237,9 @@ export default function FoodCard({ post, onDetailsModalChange }: FoodCardProps) 
                         </span>
                       </div>
                     </div>
-                  </div>
+                  </button>
 
-                  {/* ADD THESE LINES */}
+                  {/* STATS */}
                   <div className="space-y-2 mt-3">
                     {post.posterLevel && (
                       <div className="flex items-center gap-2 bg-gradient-to-r from-orange-100 to-pink-100 px-3 py-2 rounded-xl">
