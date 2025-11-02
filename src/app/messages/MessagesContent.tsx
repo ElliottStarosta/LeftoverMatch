@@ -112,7 +112,7 @@ export default function MessagesContent() {
   }, [conversations.length])
 
   useEffect(() => {
-    if (!selectedConversation) return
+    if (!selectedConversation?.id || !authUser) return
   
     const loadMessages = async () => {
       try {
@@ -120,6 +120,12 @@ export default function MessagesContent() {
         if (!db) return
   
         const { collection, query, where, orderBy, onSnapshot } = await import('firebase/firestore')
+  
+        // Add extra guard - check id is not empty string
+        if (!selectedConversation.id || selectedConversation.id.trim() === '') {
+          console.error('Invalid conversation ID')
+          return
+        }
   
         const messagesQuery = query(
           collection(db, 'messages'),
@@ -147,28 +153,9 @@ export default function MessagesContent() {
     }
   
     loadMessages()
-  }, [selectedConversation])
-
-  useEffect(() => {
-    if (!selectedConversation || !authUser) return
-  
-    const db = getDb()
-    if (!db) return
-  
-    import('firebase/firestore').then(({ doc, onSnapshot }) => {
-      const conversationRef = doc(db, 'conversations', selectedConversation.id)
-  
-      const unsubscribe = onSnapshot(conversationRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const updatedConvo = snapshot.data() as Conversation
-          // Update the selected conversation with real-time data
-          setSelectedConversation(updatedConvo)
-        }
-      })
-  
-      return () => unsubscribe()
-    })
   }, [selectedConversation?.id, authUser])
+
+  
 
 
   useEffect(() => {
@@ -236,32 +223,32 @@ export default function MessagesContent() {
   // Load conversations
   useEffect(() => {
     if (!authUser) return
-
+  
     const loadConversations = async () => {
       try {
         const db = getDb()
         if (!db) return
-
+  
         const { collection, query, where, orderBy, onSnapshot } = await import('firebase/firestore')
-
+  
         const conversationsQuery = query(
           collection(db, 'conversations'),
           where('participants', 'array-contains', authUser.uid),
           orderBy('lastMessageAt', 'desc')
         )
-
+  
         const unsubscribe = onSnapshot(conversationsQuery, (snapshot) => {
           const convos = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
           } as Conversation))
-
+  
           setConversations(convos)
-
+  
           // Load user data for all participants
           const userIds = [...new Set(convos.flatMap(c => c.participants))]
           loadUserData(userIds)
-
+  
           // Auto-select conversation from URL
           if (conversationId && !selectedConversation) {
             const convo = convos.find(c => c.id === conversationId)
@@ -272,19 +259,19 @@ export default function MessagesContent() {
               }
             }
           }
-
+  
           setLoading(false)
         })
-
+  
         return () => unsubscribe()
       } catch (error) {
         console.error('Error loading conversations:', error)
         setLoading(false)
       }
     }
-
+  
     loadConversations()
-  }, [authUser, conversationId, selectedConversation])
+  }, [authUser, conversationId])
 
   // Load user data
   const loadUserData = async (userIds: string[]) => {
@@ -311,135 +298,71 @@ export default function MessagesContent() {
     }
   }
 
-  // Load messages for selected conversation
-  useEffect(() => {
-    if (!selectedConversation) return
-
-    const loadMessages = async () => {
-      try {
-        const db = getDb()
-        if (!db) return
-
-        const { collection, query, where, orderBy, onSnapshot } = await import('firebase/firestore')
-
-        const messagesQuery = query(
-          collection(db, 'messages'),
-          where('conversationId', '==', selectedConversation.id),
-          orderBy('createdAt', 'asc')
-        )
-
-        const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-          const msgs = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          } as Message))
-
-          setMessages(msgs)
-
-          setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-          }, 100)
-        })
-
-        return () => unsubscribe()
-      } catch (error) {
-        console.error('Error loading messages:', error)
-      }
-    }
-
-    loadMessages()
-  }, [selectedConversation])
 
   // Local typing state
   const lastTypingUpdateRef = useRef<number>(0)
   const isCurrentlyTypingRef = useRef<boolean>(false)
   const typingTimeoutRef = useRef<NodeJS.Timeout>()
 
-  // Listen for typing indicators
-  useEffect(() => {
-    if (!selectedConversation || !authUser) return
+  // // Listen for typing indicators
+  // useEffect(() => {
+  //   if (!selectedConversation?.id || !authUser) return
+  
+  //   const db = getDb()
+  //   if (!db) return
+  
+  //   import('firebase/firestore').then(({ doc, onSnapshot }) => {
+  //     const conversationRef = doc(db, 'conversations', selectedConversation.id)
+  
+  //     const unsubscribe = onSnapshot(conversationRef, (snapshot) => {
+  //       if (snapshot.exists()) {
+  //         const updatedConvo = snapshot.data() as Conversation
+  //         setSelectedConversation(updatedConvo as any)
+  //       }
+  //     })
+  
+  //     return () => unsubscribe()
+  //   })
+  // }, [selectedConversation?.id, authUser])
 
-    const db = getDb()
-    if (!db) return
-
-    import('firebase/firestore').then(({ doc, onSnapshot }) => {
-      const typingRef = doc(db, 'typing', selectedConversation.id)
-
-      const unsubscribe = onSnapshot(typingRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data() as Record<string, number>
-          setTypingStatus(prev => ({
-            ...prev,
-            [selectedConversation.id]: data
-          }))
-        }
-      })
-
-      return () => unsubscribe()
-    })
-  }, [selectedConversation, authUser])
 
   // Handle typing indicator - DEBOUNCED with local state
   const handleTyping = async () => {
-    if (!selectedConversation || !authUser) return
+  if (!selectedConversation?.id || !authUser) return
 
-    const now = Date.now()
-    setLocalTypingStatus(prev => ({
-      ...prev,
-      [authUser.uid]: now
-    }))
+  const now = Date.now()
+  setLocalTypingStatus(prev => ({
+    ...prev,
+    [authUser.uid]: now
+  }))
 
-    // Clear existing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current)
+  if (typingTimeoutRef.current) {
+    clearTimeout(typingTimeoutRef.current)
+  }
+
+  typingTimeoutRef.current = setTimeout(async () => {
+    const db = getDb()
+    if (!db) return
+
+    isCurrentlyTypingRef.current = false
+
+    try {
+      const { doc, deleteField, updateDoc } = await import('firebase/firestore')
+      await updateDoc(doc(db, 'typing', selectedConversation.id), {
+        [authUser.uid]: deleteField()
+      })
+    } catch (error) {
+      console.log('Clear typing error (non-critical):', error)
     }
+  }, 2000)
 
-    // Set timeout to stop typing after 2 seconds of inactivity
-    typingTimeoutRef.current = setTimeout(async () => {
-      const db = getDb()
-      if (!db) return
+  if (now - lastTypingUpdateRef.current < 2000) {
+    return
+  }
 
-      isCurrentlyTypingRef.current = false
-
-      try {
-        const { doc, deleteField, updateDoc } = await import('firebase/firestore')
-        await updateDoc(doc(db, 'typing', selectedConversation.id), {
-          [authUser.uid]: deleteField()
-        })
-      } catch (error) {
-        // Silently fail - typing indicators are not critical
-        console.log('Clear typing error (non-critical):', error)
-      }
-    }, 2000)
-
-    // Only update Firebase every 2 seconds MAX
-    if (now - lastTypingUpdateRef.current < 2000) {
-      return
-    }
-
-    // Check if state actually changed (are we already marked as typing?)
-    if (isCurrentlyTypingRef.current) {
-      // We're already typing in Firebase, just refresh the timestamp
-      lastTypingUpdateRef.current = now
-
-      const db = getDb()
-      if (!db) return
-
-      try {
-        const { doc, setDoc } = await import('firebase/firestore')
-        await setDoc(doc(db, 'typing', selectedConversation.id), {
-          [authUser.uid]: now
-        }, { merge: true })
-      } catch (error) {
-        console.log('Update typing error (non-critical):', error)
-      }
-      return
-    }
-
+  if (isCurrentlyTypingRef.current) {
     lastTypingUpdateRef.current = now
-    isCurrentlyTypingRef.current = true
 
-    // Update Firebase (only once every 2 seconds AND only if state changed)
     const db = getDb()
     if (!db) return
 
@@ -449,49 +372,62 @@ export default function MessagesContent() {
         [authUser.uid]: now
       }, { merge: true })
     } catch (error) {
-      // Silently fail - not critical
-      console.log('Set typing error (non-critical):', error)
+      console.log('Update typing error (non-critical):', error)
     }
+    return
   }
+
+  lastTypingUpdateRef.current = now
+  isCurrentlyTypingRef.current = true
+
+  const db = getDb()
+  if (!db) return
+
+  try {
+    const { doc, setDoc } = await import('firebase/firestore')
+    await setDoc(doc(db, 'typing', selectedConversation.id), {
+      [authUser.uid]: now
+    }, { merge: true })
+  } catch (error) {
+    console.log('Set typing error (non-critical):', error)
+  }
+}
 
   // Cleanup typing status when unmounting or switching conversations
   useEffect(() => {
-    return () => {
-      if (!selectedConversation || !authUser) return
-
-      // Clear timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current)
-      }
-
-      const db = getDb()
-      if (!db) return
-
-      // Mark as not typing when unmounting
-      isCurrentlyTypingRef.current = false
-
-      import('firebase/firestore').then(({ doc, deleteField, updateDoc }) => {
-        updateDoc(doc(db, 'typing', selectedConversation.id), {
-          [authUser.uid]: deleteField()
-        }).catch(() => {
-          // Silently fail
-        })
+    if (!selectedConversation?.id || !authUser) return
+  
+    const db = getDb()
+    if (!db) return
+  
+    import('firebase/firestore').then(({ doc, onSnapshot }) => {
+      const typingRef = doc(db, 'typing', selectedConversation.id)
+  
+      const unsubscribe = onSnapshot(typingRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data() as Record<string, number>
+          setTypingStatus(prev => ({
+            ...prev,
+            [selectedConversation.id]: data
+          }))
+        }
       })
-    }
-  }, [selectedConversation, authUser])
+  
+      return () => unsubscribe()
+    })
+  }, [selectedConversation?.id, authUser])
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newMessage.trim() || !selectedConversation || !authUser) return
-
+    if (!newMessage.trim() || !selectedConversation?.id || !authUser) return
     setSending(true)
-
+  
     try {
       const db = getDb()
       if (!db) throw new Error('Database not available')
-
+  
       const { collection, addDoc, doc, updateDoc, deleteField, serverTimestamp } = await import('firebase/firestore')
-
+  
       // Clear typing status when sending message
       isCurrentlyTypingRef.current = false
       try {
@@ -501,7 +437,7 @@ export default function MessagesContent() {
       } catch (error) {
         // Ignore typing clear errors
       }
-
+  
       // Add message
       await addDoc(collection(db, 'messages'), {
         conversationId: selectedConversation.id,
@@ -511,15 +447,15 @@ export default function MessagesContent() {
         createdAt: serverTimestamp(),
         read: false
       })
-
+  
       // Update conversation
       await updateDoc(doc(db, 'conversations', selectedConversation.id), {
         lastMessage: newMessage.substring(0, 100),
         lastMessageAt: serverTimestamp()
       })
-
+  
       setNewMessage('')
-
+  
       // Animate send
       const input = document.querySelector('.message-input')
       if (input) {
@@ -535,25 +471,25 @@ export default function MessagesContent() {
       setSending(false)
     }
   }
+  
 
   const handleAcceptClaim = async () => {
-    if (!selectedConversation || !authUser) return
-
+    if (!selectedConversation?.id || !authUser) return
+  
     setAccepting(true)
-
-
+  
     try {
       const db = getDb()
       if (!db) throw new Error('Database not available')
-
+  
       const { collection, addDoc, doc, updateDoc, getDoc, serverTimestamp } = await import('firebase/firestore')
-
+  
       const postDoc = await getDoc(doc(db, 'posts', selectedConversation.postId))
       if (!postDoc.exists()) throw new Error('Post not found')
-
+  
       const postData = postDoc.data()
       const fullAddress = postData.location?.address || 'Address not available'
-
+  
       await updateDoc(doc(db, 'conversations', selectedConversation.id), {
         status: 'accepted',
         claimAccepted: true,
@@ -561,7 +497,7 @@ export default function MessagesContent() {
         postLocation: fullAddress,
         acceptedAt: serverTimestamp()
       })
-
+  
       await addDoc(collection(db, 'messages'), {
         conversationId: selectedConversation.id,
         senderId: 'system',
@@ -570,26 +506,29 @@ export default function MessagesContent() {
         createdAt: serverTimestamp(),
         read: false
       })
-
+  
       await updateDoc(doc(db, 'claims', selectedConversation.claimId), {
-        status: 'accepted',
-        acceptedAt: serverTimestamp()
+        status: 'completed',
+        completedAt: serverTimestamp()
       })
-
+  
       await addDoc(collection(db, 'notifications'), {
         userId: selectedConversation.claimerId,
-        type: 'claim_accepted',
-        conversationId: selectedConversation.id,
-        postTitle: selectedConversation.postTitle,
+        type: 'claim_confirmed',
+        title: 'Claim Accepted!',
         message: `Your claim for "${selectedConversation.postTitle}" was accepted!`,
+        data: {
+          conversationId: selectedConversation.id,
+          postTitle: selectedConversation.postTitle
+        },
         read: false,
         createdAt: serverTimestamp()
       })
-
+  
       setSelectedConversation(prev =>
         prev ? { ...prev, claimAccepted: true, addressRevealed: true, postLocation: fullAddress } : null
       )
-
+  
       const button = document.querySelector('.accept-button')
       if (button) {
         gsap.to(button, {
@@ -603,9 +542,6 @@ export default function MessagesContent() {
     } catch (error) {
       console.error('Error accepting claim:', error)
       alert('Failed to accept claim')
-      setSelectedConversation(prev =>
-        prev ? { ...prev, claimAccepted: false } : null
-      )
     } finally {
       setAccepting(false)
     }
