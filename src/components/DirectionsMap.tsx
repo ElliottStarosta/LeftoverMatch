@@ -182,7 +182,7 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
       {/* Collapsed View - Always visible */}
       <button
         onClick={() => setIsExpanded(true)}
-        className="w-fit bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-2xl p-4 hover:bg-blue-100/50 transition-all flex items-center justify-between"
+        className="w-full bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-2xl p-4 hover:bg-blue-100/50 transition-all flex items-center justify-between"
         type="button"
       >
         <div className="flex items-center gap-3">
