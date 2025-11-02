@@ -80,10 +80,10 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
               } else if (maneuver === 'turn') {
                 if (modifier === 'left') {
                   instruction = `Turn left onto ${name}`
-                  icon = <ArrowLeftIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(45deg)' }} />
+                  icon = <ArrowLeftIcon className="w-8 h-8 text-blue-600" />
                 } else if (modifier === 'right') {
                   instruction = `Turn right onto ${name}`
-                  icon = <ArrowRightIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(-45deg)' }} />
+                  icon = <ArrowRightIcon className="w-8 h-8 text-blue-600" />
                 } else if (modifier === 'sharp left') {
                   instruction = `Turn sharp left onto ${name}`
                   icon = <ArrowLeftIcon className="w-8 h-8 text-blue-600" />
@@ -92,10 +92,10 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
                   icon = <ArrowRightIcon className="w-8 h-8 text-blue-600" />
                 } else if (modifier === 'slight left') {
                   instruction = `Turn slightly left onto ${name}`
-                  icon = <ArrowLeftIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(25deg)' }} />
+                  icon = <ArrowLeftIcon className="w-8 h-8 text-blue-600" style={{ opacity: 0.7 }} />
                 } else if (modifier === 'slight right') {
                   instruction = `Turn slightly right onto ${name}`
-                  icon = <ArrowRightIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(-25deg)' }} />
+                  icon = <ArrowRightIcon className="w-8 h-8 text-blue-600" style={{ opacity: 0.7 }} />
                 } else if (modifier === 'straight') {
                   instruction = `Continue straight on ${name}`
                   icon = <ArrowUpIcon className="w-8 h-8 text-blue-600" />
@@ -110,15 +110,15 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
               } else if (maneuver === 'merge') {
                 instruction = `Merge ${modifier || ''} onto ${name}`
                 if (modifier === 'left') {
-                  icon = <ArrowLeftIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(45deg)' }} />
+                  icon = <ArrowLeftIcon className="w-8 h-8 text-blue-600" />
                 } else {
-                  icon = <ArrowRightIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(-45deg)' }} />
+                  icon = <ArrowRightIcon className="w-8 h-8 text-blue-600" />
                 }
               } else if (maneuver === 'fork') {
                 instruction = `Take the ${modifier || 'left'} fork onto ${name}`
                 icon = modifier === 'right' ? 
-                  <ArrowRightIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(-45deg)' }} /> : 
-                  <ArrowLeftIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(45deg)' }} />
+                  <ArrowRightIcon className="w-8 h-8 text-blue-600" /> : 
+                  <ArrowLeftIcon className="w-8 h-8 text-blue-600" />
               } else if (maneuver === 'on ramp') {
                 instruction = `Take the on ramp onto ${name}`
                 icon = <ArrowUpIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(45deg)' }} />
@@ -182,21 +182,21 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
       {/* Collapsed View - Always visible */}
       <button
         onClick={() => setIsExpanded(true)}
-        className="w-full bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-2xl p-4 hover:bg-blue-100/50 transition-all flex items-center justify-between"
+        className="w-fit bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-2xl p-4 hover:bg-blue-100/50 transition-all flex items-center justify-between"
         type="button"
       >
-        <div className="flex items-center gap-3 flex-1">
+        <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
             <span className="text-white text-lg">🗺️</span>
           </div>
-          <div className="text-left min-w-0">
+          <div className="text-left">
             <p className="font-bold text-gray-900 text-sm">View Directions</p>
             <p className="text-xs text-gray-600">
               {totalDistance} • {totalDuration}
             </p>
           </div>
         </div>
-        <ChevronDownIcon className="w-5 h-5 text-blue-600 flex-shrink-0" />
+        <ChevronDownIcon className="w-5 h-5 text-blue-600 flex-shrink-0 ml-4" />
       </button>
 
       {/* Expanded Apple Maps Style Sheet */}

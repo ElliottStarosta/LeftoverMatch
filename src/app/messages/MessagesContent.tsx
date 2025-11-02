@@ -946,9 +946,7 @@ export default function MessagesContent() {
                 </div>
   
                 {/* Map Preview */}
-                <div className="bg-gradient-to-br from-orange-100 to-pink-100 rounded-2xl overflow-hidden border-2 border-orange-200 h-48 w-full">
-                  <DirectionsMap destinationAddress={selectedConversation.postLocation} />
-                </div>
+                <DirectionsMap destinationAddress={selectedConversation.postLocation} />
   
                 {/* Navigation Options */}
                 <div className="space-y-2">
