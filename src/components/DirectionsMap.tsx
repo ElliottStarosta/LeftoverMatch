@@ -156,20 +156,16 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
 
   if (loading) {
     return (
-      <div className="w-full h-full bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-4 border-2 border-blue-200 flex items-center justify-center">
-        <div className="flex items-center gap-2 text-blue-600">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-          <span className="text-sm font-semibold">Loading directions...</span>
-        </div>
+      <div className="flex items-center gap-2 text-blue-600">
+        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+        <span className="text-sm font-semibold">Loading directions...</span>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="w-full h-full bg-gradient-to-br from-red-50 to-pink-50 rounded-2xl p-4 border-2 border-red-200 flex items-center justify-center">
-        <p className="text-sm text-red-600 font-semibold">❌ {error}</p>
-      </div>
+      <p className="text-sm text-red-600 font-semibold">❌ {error}</p>
     )
   }
 
