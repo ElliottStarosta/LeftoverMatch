@@ -285,8 +285,11 @@ export default function MessagesContent() {
       const unsubscribe = onSnapshot(conversationRef, (snapshot) => {
         if (snapshot.exists()) {
           const updatedConvo = snapshot.data() as Conversation
-          // Update the selected conversation with real-time data
-          setSelectedConversation(updatedConvo)
+          // IMPORTANT: Make sure to include the id when updating
+          setSelectedConversation({
+            ...updatedConvo,
+            id: snapshot.id
+          })
         }
       })
   
@@ -438,6 +441,18 @@ export default function MessagesContent() {
     })
   }, [selectedConversation?.id, authUser])
 
+  useEffect(() => {
+    if (!selectedConversation?.id) return
+  
+    setConversations(prev => 
+      prev.map(convo => 
+        convo.id === selectedConversation.id 
+          ? selectedConversation 
+          : convo
+      )
+    )
+  }, [selectedConversation?.id, selectedConversation?.claimAccepted])
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newMessage.trim() || !selectedConversation?.id || !authUser) return
@@ -495,22 +510,55 @@ export default function MessagesContent() {
   
 
   const handleAcceptClaim = async () => {
-    if (!selectedConversation?.id || !authUser) return
+    console.log('handleAcceptClaim called', { selectedConversation, authUser })
+    
+    // Better null checks
+    if (!selectedConversation) {
+      console.error('selectedConversation is null')
+      alert('No conversation selected')
+      return
+    }
   
+    if (!selectedConversation.id) {
+      console.error('selectedConversation.id is missing:', selectedConversation)
+      alert('Conversation ID is missing')
+      return
+    }
+  
+    if (!authUser) {
+      console.error('authUser is null')
+      alert('Not authenticated')
+      return
+    }
+  
+    console.log('All checks passed, proceeding...')
     setAccepting(true)
   
     try {
       const db = getDb()
-      if (!db) throw new Error('Database not available')
+      if (!db) {
+        console.error('Database not available')
+        throw new Error('Database not available')
+      }
   
+      console.log('Importing firestore...')
       const { collection, addDoc, doc, updateDoc, getDoc, serverTimestamp } = await import('firebase/firestore')
   
+      console.log('Fetching post document:', selectedConversation.postId)
       const postDoc = await getDoc(doc(db, 'posts', selectedConversation.postId))
-      if (!postDoc.exists()) throw new Error('Post not found')
+      
+      if (!postDoc.exists()) {
+        console.error('Post not found:', selectedConversation.postId)
+        throw new Error('Post not found')
+      }
   
       const postData = postDoc.data()
+      console.log('Post data:', postData)
+      
       const fullAddress = postData.location?.address || 'Address not available'
+      console.log('Full address:', fullAddress)
   
+      console.log('Updating conversation with ID:', selectedConversation.id)
       await updateDoc(doc(db, 'conversations', selectedConversation.id), {
         status: 'accepted',
         claimAccepted: true,
@@ -518,7 +566,9 @@ export default function MessagesContent() {
         postLocation: fullAddress,
         acceptedAt: serverTimestamp()
       })
+      console.log('✅ Conversation updated')
   
+      console.log('Adding system message...')
       await addDoc(collection(db, 'messages'), {
         conversationId: selectedConversation.id,
         senderId: 'system',
@@ -528,11 +578,13 @@ export default function MessagesContent() {
         read: false
       })
   
+      console.log('Updating claim...')
       await updateDoc(doc(db, 'claims', selectedConversation.claimId), {
         status: 'completed',
         completedAt: serverTimestamp()
       })
   
+      console.log('Adding notification...')
       await addDoc(collection(db, 'notifications'), {
         userId: selectedConversation.claimerId,
         type: 'claim_confirmed',
@@ -545,24 +597,12 @@ export default function MessagesContent() {
         read: false,
         createdAt: serverTimestamp()
       })
+      
   
-      setSelectedConversation(prev =>
-        prev ? { ...prev, claimAccepted: true, addressRevealed: true, postLocation: fullAddress } : null
-      )
-  
-      const button = document.querySelector('.accept-button')
-      if (button) {
-        gsap.to(button, {
-          scale: 1.1,
-          duration: 0.2,
-          yoyo: true,
-          repeat: 1,
-          ease: 'power2.inOut'
-        })
-      }
     } catch (error) {
-      console.error('Error accepting claim:', error)
-      alert('Failed to accept claim')
+      console.error('❌ Error accepting claim:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      alert(`Failed to accept claim: ${errorMessage}`)
     } finally {
       setAccepting(false)
     }
@@ -817,7 +857,7 @@ export default function MessagesContent() {
           </div>
   
           {/* Accept Claim Button */}
-          {isPoster && !isClaimAccepted && selectedConversation && !selectedConversation.claimAccepted && (
+          {isPoster && !selectedConversation?.claimAccepted && (
             <div className="action-button px-4 py-3 bg-gradient-to-r from-green-100 to-emerald-100 border-t-2 border-green-300">
               <button
                 onClick={handleAcceptClaim}
@@ -1246,7 +1286,7 @@ export default function MessagesContent() {
                 </div>
 
                 {/* Accept Claim Button */}
-                {isPoster && !isClaimAccepted && (
+                {isPoster && !selectedConversation?.claimAccepted && (
                   <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-t border-green-200">
                     <button
                       onClick={handleAcceptClaim}
