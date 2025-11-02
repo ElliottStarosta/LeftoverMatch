@@ -442,6 +442,36 @@ useEffect(() => {
     )
   }, [selectedConversation?.id, selectedConversation?.claimAccepted])
 
+  useEffect(() => {
+    if (!selectedConversation?.id || !authUser) return
+  
+    const db = getDb()
+    if (!db) return
+  
+    import('firebase/firestore').then(({ doc, onSnapshot }) => {
+      const conversationRef = doc(db, 'conversations', selectedConversation.id)
+  
+      const unsubscribe = onSnapshot(
+        conversationRef,
+        (snapshot) => {
+          // If the conversation no longer exists, redirect to homepage
+          if (!snapshot.exists()) {
+            console.log('Conversation was deleted, redirecting to home')
+            alert('This conversation has ended.')
+            router.push('/')
+          }
+        },
+        (error) => {
+          // If there's a permission error or the doc is deleted, it means it no longer exists
+          console.log('Conversation access error:', error)
+          router.push('/')
+        }
+      )
+  
+      return () => unsubscribe()
+    })
+  }, [selectedConversation?.id, authUser, router])
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newMessage.trim() || !selectedConversation?.id || !authUser) return
