@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ChevronDownIcon } from '@heroicons/react/24/outline'
+import { ChevronDownIcon, ArrowUpIcon, ArrowDownIcon, ArrowLeftIcon, ArrowRightIcon, ArrowUturnLeftIcon, ArrowUturnRightIcon } from '@heroicons/react/24/solid'
 
 interface DirectionsMapProps {
   destinationAddress: string
@@ -11,7 +11,7 @@ interface DirectionStep {
   instruction: string
   distance: string
   duration: string
-  emoji: string
+  icon: React.ReactNode
 }
 
 export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
@@ -69,72 +69,80 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
               
               // Generate proper instruction based on maneuver
               let instruction = ''
-              let emoji = '🚗'
+              let icon: React.ReactNode = null
 
               if (maneuver === 'depart') {
                 instruction = `Head ${modifier || 'out'} on ${name}`
-                emoji = '🚀'
+                icon = <ArrowUpIcon className="w-8 h-8 text-blue-600" />
               } else if (maneuver === 'arrive') {
                 instruction = 'You have arrived at your destination'
-                emoji = '🎯'
+                icon = <div className="text-2xl">📍</div>
               } else if (maneuver === 'turn') {
                 if (modifier === 'left') {
                   instruction = `Turn left onto ${name}`
-                  emoji = '↙️'
+                  icon = <ArrowLeftIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(45deg)' }} />
                 } else if (modifier === 'right') {
                   instruction = `Turn right onto ${name}`
-                  emoji = '↗️'
+                  icon = <ArrowRightIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(-45deg)' }} />
                 } else if (modifier === 'sharp left') {
                   instruction = `Turn sharp left onto ${name}`
-                  emoji = '⬅️'
+                  icon = <ArrowLeftIcon className="w-8 h-8 text-blue-600" />
                 } else if (modifier === 'sharp right') {
                   instruction = `Turn sharp right onto ${name}`
-                  emoji = '➡️'
+                  icon = <ArrowRightIcon className="w-8 h-8 text-blue-600" />
                 } else if (modifier === 'slight left') {
                   instruction = `Turn slightly left onto ${name}`
-                  emoji = '↙️'
+                  icon = <ArrowLeftIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(25deg)' }} />
                 } else if (modifier === 'slight right') {
                   instruction = `Turn slightly right onto ${name}`
-                  emoji = '↗️'
+                  icon = <ArrowRightIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(-25deg)' }} />
                 } else if (modifier === 'straight') {
                   instruction = `Continue straight on ${name}`
-                  emoji = '⬆️'
+                  icon = <ArrowUpIcon className="w-8 h-8 text-blue-600" />
                 } else {
                   instruction = `Turn onto ${name}`
-                  emoji = '🔄'
+                  icon = <ArrowRightIcon className="w-8 h-8 text-blue-600" />
                 }
               } else if (maneuver === 'roundabout' || maneuver === 'rotary') {
                 const exitNum = step.maneuver.exit || ''
                 instruction = `Enter the roundabout${exitNum ? ` and take the ${exitNum} exit` : ''} onto ${name}`
-                emoji = '🔁'
+                icon = <ArrowUturnLeftIcon className="w-8 h-8 text-blue-600" />
               } else if (maneuver === 'merge') {
                 instruction = `Merge ${modifier || ''} onto ${name}`
-                emoji = '🔀'
+                if (modifier === 'left') {
+                  icon = <ArrowLeftIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(45deg)' }} />
+                } else {
+                  icon = <ArrowRightIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(-45deg)' }} />
+                }
               } else if (maneuver === 'fork') {
                 instruction = `Take the ${modifier || 'left'} fork onto ${name}`
-                emoji = '🌳'
+                icon = modifier === 'right' ? 
+                  <ArrowRightIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(-45deg)' }} /> : 
+                  <ArrowLeftIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(45deg)' }} />
               } else if (maneuver === 'on ramp') {
                 instruction = `Take the on ramp onto ${name}`
-                emoji = '🛣️'
+                icon = <ArrowUpIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(45deg)' }} />
               } else if (maneuver === 'off ramp') {
                 instruction = `Take the off ramp onto ${name}`
-                emoji = '🛣️'
+                icon = <ArrowDownIcon className="w-8 h-8 text-blue-600" style={{ transform: 'rotate(45deg)' }} />
               } else if (maneuver === 'end of road') {
                 instruction = `Road ends, turn ${modifier || 'left'} onto ${name}`
-                emoji = '🛑'
+                icon = modifier === 'right' ? 
+                  <ArrowRightIcon className="w-8 h-8 text-blue-600" /> : 
+                  <ArrowLeftIcon className="w-8 h-8 text-blue-600" />
               } else if (maneuver === 'use lane') {
                 instruction = `Use the ${modifier || 'left'} lane on ${name}`
-                emoji = '🛣️'
+                icon = <ArrowUpIcon className="w-8 h-8 text-blue-600" />
               } else {
                 instruction = `Continue on ${name}`
-                emoji = '🚗'
+                icon = <ArrowUpIcon className="w-8 h-8 text-blue-600" />
               }
 
               steps.push({
                 instruction,
                 distance: formatDistance(step.distance),
                 duration: formatDuration(step.duration),
-                emoji
+                icon
               })
             }
           }
@@ -222,9 +230,9 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
                     key={index}
                     className="flex gap-4 p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl hover:from-blue-50 hover:to-cyan-50 transition-all border-l-4 border-blue-400"
                   >
-                    {/* Emoji Icon */}
-                    <div className="text-3xl flex-shrink-0 w-12 flex items-center justify-center">
-                      {step.emoji}
+                    {/* Direction Icon */}
+                    <div className="flex-shrink-0 w-12 flex items-center justify-center">
+                      {step.icon}
                     </div>
 
                     {/* Step Details */}
