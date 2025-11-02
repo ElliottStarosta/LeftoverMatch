@@ -86,6 +86,7 @@ export default function MessagesContent() {
   const listRef = useRef<HTMLDivElement>(null)
   const [showDirectionsModal, setShowDirectionsModal] = useState(false)
 
+  const hasAnimatedRef = useRef(false)
 
   // Detect mobile
   useEffect(() => {
@@ -98,18 +99,24 @@ export default function MessagesContent() {
   }, [])
 
   useEffect(() => {
+    // Only animate if conversations exist and is small (initial load or small update)
+    if (conversations.length === 0) return
+    
+    // Skip animation if there are many items (likely a refresh/update, not initial load)
+    if (conversations.length > 10) return
+  
     // Animate header
     gsap.fromTo('.conversations-header',
       { opacity: 0, y: -30 },
       { opacity: 1, y: 0, duration: 0.5, ease: 'back.out(1.7)' }
     )
-
+  
     // Animate conversation cards
     gsap.fromTo('.conversation-card',
       { opacity: 0, x: -30, scale: 0.9 },
       { opacity: 1, x: 0, scale: 1, duration: 0.4, stagger: 0.08, ease: 'back.out(1.7)' }
     )
-  }, [conversations.length])
+  }, [])
 
   useEffect(() => {
     if (!selectedConversation?.id || !authUser) return
@@ -158,41 +165,23 @@ export default function MessagesContent() {
   
 
 
-  useEffect(() => {
-    if (!isMobile) return;
-    if (showChatView && selectedConversation) {
-      // Animate chat header
+
+useEffect(() => {
+  if (!isMobile) return
+
+  if (showChatView && selectedConversation) {
+    // Only animate on first entry to chat view
+    if (!hasAnimatedRef.current) {
       gsap.fromTo('.chat-header',
         { opacity: 0, y: -30 },
         { opacity: 1, y: 0, duration: 0.5, ease: 'back.out(1.7)' }
       )
-
-      // Animate messages
-      gsap.fromTo('.message-bubble',
-        { opacity: 0, x: (i) => i % 2 === 0 ? -30 : 30, scale: 0.8 },
-        { opacity: 1, x: 0, scale: 1, duration: 0.4, stagger: 0.05, ease: 'back.out(1.7)' }
-      )
-
-      // Animate input
-      gsap.fromTo('.message-input-container',
-        { opacity: 0, y: 30 },
-        { opacity: 1, y: 0, duration: 0.5, delay: 0.2, ease: 'back.out(1.7)' }
-      )
-    } else if (isMobile && !showChatView) {
-      // Animate header
-      gsap.fromTo('.conversations-header',
-        { opacity: 0, y: -30 },
-        { opacity: 1, y: 0, duration: 0.5, ease: 'back.out(1.7)' }
-      )
-
-      // Animate conversation cards
-      gsap.fromTo('.conversation-card',
-        { opacity: 0, x: -30, scale: 0.9 },
-        { opacity: 1, x: 0, scale: 1, duration: 0.4, stagger: 0.08, ease: 'back.out(1.7)' }
-      )
+      hasAnimatedRef.current = true
     }
-  }, [showChatView, selectedConversation, isMobile])
-
+  } else if (isMobile && !showChatView) {
+    hasAnimatedRef.current = false
+  }
+}, [showChatView, isMobile])
   // Entrance animation
   useEffect(() => {
     if (!containerRef.current) return
