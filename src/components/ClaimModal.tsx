@@ -66,6 +66,8 @@ export default function ClaimModal({ post, onClose, claimId, currentUserId }: Cl
     fetchPosterData()
   }, [post.userId])
 
+
+
   // Entrance animation
   useEffect(() => {
     if (loading) return
@@ -120,6 +122,14 @@ export default function ClaimModal({ post, onClose, claimId, currentUserId }: Cl
       )
     }
   }, [loading])
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+  
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [])
 
   const handleSendMessage = async () => {
     if (!message.trim() || !claimId) {

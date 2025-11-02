@@ -118,6 +118,8 @@ export default function MessagesContent() {
     )
   }, [])
 
+  
+
   useEffect(() => {
     if (!selectedConversation?.id || !authUser) return
   
