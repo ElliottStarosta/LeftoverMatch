@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
+import { ChevronDownIcon } from '@heroicons/react/24/outline'
 
 interface DirectionsMapProps {
   destinationAddress: string
@@ -11,6 +11,7 @@ interface DirectionStep {
   instruction: string
   distance: string
   duration: string
+  emoji: string
 }
 
 export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
@@ -43,7 +44,7 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
         const coords = await geocodeAddress(destinationAddress)
         if (!coords) throw new Error('Could not find destination')
 
-        // Fetch route from OSRM (OpenStreetMap Routing Machine)
+        // Fetch route from OSRM
         const routeUrl = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${coords.lng},${coords.lat}?steps=true&geometries=geojson&overview=full&annotations=distance,duration`
         const response = await fetch(routeUrl)
         const data = await response.json()
@@ -55,35 +56,85 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
         const route = data.routes[0]
         const steps: DirectionStep[] = []
 
-        // Process route steps with better formatting
+        // Process each leg and step
         for (const leg of route.legs) {
-          for (const step of leg.steps) {
+          for (let stepIdx = 0; stepIdx < leg.steps.length; stepIdx++) {
+            const step = leg.steps[stepIdx]
+            const nextStep = stepIdx < leg.steps.length - 1 ? leg.steps[stepIdx + 1] : null
+
             if (step.maneuver) {
-              // Parse maneuver instruction
-              let instruction = step.maneuver.instruction || 'Continue'
-              
-              // Add emoji based on maneuver type
               const maneuver = step.maneuver.type
+              const modifier = step.maneuver.modifier
+              const name = step.name || 'unnamed road'
+              
+              // Generate proper instruction based on maneuver
+              let instruction = ''
               let emoji = '🚗'
-              
-              if (maneuver === 'turn' || maneuver === 'merge' || maneuver === 'fork') {
-                const direction = step.maneuver.modifier
-                if (direction === 'left') emoji = '↙️'
-                else if (direction === 'right') emoji = '↗️'
-                else if (direction === 'straight') emoji = '⬆️'
-                else if (direction === 'uturn') emoji = '🔄'
-              } else if (maneuver === 'arrive') {
-                emoji = '🎯'
-              } else if (maneuver === 'depart') {
+
+              if (maneuver === 'depart') {
+                instruction = `Head ${modifier || 'out'} on ${name}`
                 emoji = '🚀'
-              } else if (maneuver === 'roundabout') {
+              } else if (maneuver === 'arrive') {
+                instruction = 'You have arrived at your destination'
+                emoji = '🎯'
+              } else if (maneuver === 'turn') {
+                if (modifier === 'left') {
+                  instruction = `Turn left onto ${name}`
+                  emoji = '↙️'
+                } else if (modifier === 'right') {
+                  instruction = `Turn right onto ${name}`
+                  emoji = '↗️'
+                } else if (modifier === 'sharp left') {
+                  instruction = `Turn sharp left onto ${name}`
+                  emoji = '⬅️'
+                } else if (modifier === 'sharp right') {
+                  instruction = `Turn sharp right onto ${name}`
+                  emoji = '➡️'
+                } else if (modifier === 'slight left') {
+                  instruction = `Turn slightly left onto ${name}`
+                  emoji = '↙️'
+                } else if (modifier === 'slight right') {
+                  instruction = `Turn slightly right onto ${name}`
+                  emoji = '↗️'
+                } else if (modifier === 'straight') {
+                  instruction = `Continue straight on ${name}`
+                  emoji = '⬆️'
+                } else {
+                  instruction = `Turn onto ${name}`
+                  emoji = '🔄'
+                }
+              } else if (maneuver === 'roundabout' || maneuver === 'rotary') {
+                const exitNum = step.maneuver.exit || ''
+                instruction = `Enter the roundabout${exitNum ? ` and take the ${exitNum} exit` : ''} onto ${name}`
                 emoji = '🔁'
+              } else if (maneuver === 'merge') {
+                instruction = `Merge ${modifier || ''} onto ${name}`
+                emoji = '🔀'
+              } else if (maneuver === 'fork') {
+                instruction = `Take the ${modifier || 'left'} fork onto ${name}`
+                emoji = '🌳'
+              } else if (maneuver === 'on ramp') {
+                instruction = `Take the on ramp onto ${name}`
+                emoji = '🛣️'
+              } else if (maneuver === 'off ramp') {
+                instruction = `Take the off ramp onto ${name}`
+                emoji = '🛣️'
+              } else if (maneuver === 'end of road') {
+                instruction = `Road ends, turn ${modifier || 'left'} onto ${name}`
+                emoji = '🛑'
+              } else if (maneuver === 'use lane') {
+                instruction = `Use the ${modifier || 'left'} lane on ${name}`
+                emoji = '🛣️'
+              } else {
+                instruction = `Continue on ${name}`
+                emoji = '🚗'
               }
-              
+
               steps.push({
-                instruction: `${emoji} ${instruction}`,
+                instruction,
                 distance: formatDistance(step.distance),
-                duration: formatDuration(step.duration)
+                duration: formatDuration(step.duration),
+                emoji
               })
             }
           }
@@ -105,7 +156,7 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
 
   if (loading) {
     return (
-      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-4 border-2 border-blue-200">
+      <div className="w-full h-full bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-4 border-2 border-blue-200 flex items-center justify-center">
         <div className="flex items-center gap-2 text-blue-600">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
           <span className="text-sm font-semibold">Loading directions...</span>
@@ -116,84 +167,114 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
 
   if (error) {
     return (
-      <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-2xl p-4 border-2 border-red-200">
+      <div className="w-full h-full bg-gradient-to-br from-red-50 to-pink-50 rounded-2xl p-4 border-2 border-red-200 flex items-center justify-center">
         <p className="text-sm text-red-600 font-semibold">❌ {error}</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border-2 border-blue-200 overflow-hidden">
-      {/* Header - Always visible */}
+    <>
+      {/* Collapsed View - Always visible */}
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full p-4 flex items-center justify-between hover:bg-blue-100/50 transition-colors"
+        onClick={() => setIsExpanded(true)}
+        className="w-full bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-2xl p-4 hover:bg-blue-100/50 transition-all flex items-center justify-between"
         type="button"
       >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-lg">
+        <div className="flex items-center gap-3 flex-1">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
             <span className="text-white text-lg">🗺️</span>
           </div>
-          <div className="text-left">
-            <p className="font-bold text-gray-900 text-sm">
-              {isExpanded ? 'Hide Turn-by-Turn' : 'View Directions'}
-            </p>
+          <div className="text-left min-w-0">
+            <p className="font-bold text-gray-900 text-sm">View Directions</p>
             <p className="text-xs text-gray-600">
               {totalDistance} • {totalDuration}
             </p>
           </div>
         </div>
-        {isExpanded ? (
-          <ChevronUpIcon className="w-5 h-5 text-blue-600" />
-        ) : (
-          <ChevronDownIcon className="w-5 h-5 text-blue-600" />
-        )}
+        <ChevronDownIcon className="w-5 h-5 text-blue-600 flex-shrink-0" />
       </button>
 
-      {/* Directions List - Expandable */}
+      {/* Expanded Apple Maps Style Sheet */}
       {isExpanded && (
-        <div className="border-t-2 border-blue-200 bg-white max-h-96 overflow-y-auto">
-          <div className="p-4 space-y-3">
-            {directions.map((step, index) => (
-              <div
-                key={index}
-                className="flex gap-3 items-start p-3 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl hover:from-blue-100 hover:to-cyan-100 transition-colors border-l-4 border-blue-400"
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
+          <div className="w-full bg-white rounded-t-3xl shadow-2xl flex flex-col max-h-[90vh] animate-in slide-in-from-bottom">
+            {/* Drag Handle & Header */}
+            <div className="flex flex-col items-center border-b border-gray-200 p-4">
+              <div className="w-12 h-1 bg-gray-300 rounded-full mb-3"></div>
+              <div className="flex items-center justify-between w-full">
+                <h2 className="text-lg font-bold text-gray-900">Directions to {destinationAddress}</h2>
+                <button
+                  onClick={() => setIsExpanded(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  type="button"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="mt-3 w-full bg-gradient-to-r from-blue-500 to-cyan-500 h-1 rounded-full"></div>
+              <p className="text-sm text-gray-600 mt-3 font-semibold">
+                {totalDistance} • {totalDuration}
+              </p>
+            </div>
+
+            {/* Scrollable Directions List */}
+            <div className="flex-1 overflow-y-auto px-4 py-4">
+              <div className="space-y-2 pb-4">
+                {directions.map((step, index) => (
+                  <div
+                    key={index}
+                    className="flex gap-4 p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl hover:from-blue-50 hover:to-cyan-50 transition-all border-l-4 border-blue-400"
+                  >
+                    {/* Emoji Icon */}
+                    <div className="text-3xl flex-shrink-0 w-12 flex items-center justify-center">
+                      {step.emoji}
+                    </div>
+
+                    {/* Step Details */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 text-base leading-tight">
+                        {step.instruction}
+                      </p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {step.distance} • {step.duration}
+                      </p>
+                    </div>
+
+                    {/* Step Number */}
+                    <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-md">
+                      <span className="text-white text-xs font-bold">{index + 1}</span>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Final Destination */}
+                <div className="flex gap-4 p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-400 mt-4">
+                  <div className="text-3xl flex-shrink-0">📍</div>
+                  <div className="flex-1">
+                    <p className="font-bold text-gray-900 text-base">Destination</p>
+                    <p className="text-sm text-gray-600 mt-1 break-words">
+                      {destinationAddress}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Close Button at Bottom */}
+            <div className="border-t border-gray-200 p-4 bg-white">
+              <button
+                onClick={() => setIsExpanded(false)}
+                className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 rounded-xl font-bold hover:from-blue-600 hover:to-cyan-600 transition-all"
+                type="button"
               >
-                {/* Step number */}
-                <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-md">
-                  <span className="text-white text-sm font-bold">{index + 1}</span>
-                </div>
-
-                {/* Step details */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 mb-1">
-                    {step.instruction}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    {step.distance} • {step.duration}
-                  </p>
-                </div>
-              </div>
-            ))}
-
-            {/* Final destination */}
-            <div className="flex gap-3 items-start p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-300">
-              <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-md">
-                <span className="text-white text-lg">📍</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-gray-900 mb-1">
-                  Destination
-                </p>
-                <p className="text-xs text-gray-600 break-words">
-                  {destinationAddress}
-                </p>
-              </div>
+                Close
+              </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
 
@@ -221,6 +302,7 @@ async function geocodeAddress(address: string): Promise<{ lat: number; lng: numb
 function formatDistance(meters: number): string {
   const miles = meters * 0.000621371
   if (miles < 0.1) return `${Math.round(meters)} m`
+  if (miles < 1) return `${(miles * 5280).toFixed(0)} ft`
   return `${miles.toFixed(1)} mi`
 }
 
