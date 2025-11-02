@@ -113,24 +113,62 @@ export default function MessagesContent() {
 
   useEffect(() => {
     if (!selectedConversation) return
+  
+    const loadMessages = async () => {
+      try {
+        const db = getDb()
+        if (!db) return
+  
+        const { collection, query, where, orderBy, onSnapshot } = await import('firebase/firestore')
+  
+        const messagesQuery = query(
+          collection(db, 'messages'),
+          where('conversationId', '==', selectedConversation.id),
+          orderBy('createdAt', 'asc')
+        )
+  
+        const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+          const msgs = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          } as Message))
+  
+          setMessages(msgs)
+  
+          setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+          }, 100)
+        })
+  
+        return () => unsubscribe()
+      } catch (error) {
+        console.error('Error loading messages:', error)
+      }
+    }
+  
+    loadMessages()
+  }, [selectedConversation])
 
+  useEffect(() => {
+    if (!selectedConversation || !authUser) return
+  
     const db = getDb()
     if (!db) return
-
+  
     import('firebase/firestore').then(({ doc, onSnapshot }) => {
       const conversationRef = doc(db, 'conversations', selectedConversation.id)
-
+  
       const unsubscribe = onSnapshot(conversationRef, (snapshot) => {
-        if (!snapshot.exists()) {
-          // Conversation was deleted, redirect to home
-          console.log('Conversation deleted, redirecting to home')
-          router.push('/')
+        if (snapshot.exists()) {
+          const updatedConvo = snapshot.data() as Conversation
+          // Update the selected conversation with real-time data
+          setSelectedConversation(updatedConvo)
         }
       })
-
+  
       return () => unsubscribe()
     })
-  }, [selectedConversation, router])
+  }, [selectedConversation?.id, authUser])
 
 
   useEffect(() => {

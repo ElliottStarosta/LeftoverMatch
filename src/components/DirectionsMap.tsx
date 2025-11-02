@@ -44,7 +44,7 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
         if (!coords) throw new Error('Could not find destination')
 
         // Fetch route from OSRM (OpenStreetMap Routing Machine)
-        const routeUrl = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${coords.lng},${coords.lat}?steps=true&overview=false`
+        const routeUrl = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${coords.lng},${coords.lat}?steps=true&geometries=geojson&overview=full&annotations=distance,duration`
         const response = await fetch(routeUrl)
         const data = await response.json()
 
@@ -55,12 +55,33 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
         const route = data.routes[0]
         const steps: DirectionStep[] = []
 
-        // Process route steps
+        // Process route steps with better formatting
         for (const leg of route.legs) {
           for (const step of leg.steps) {
-            if (step.maneuver && step.maneuver.instruction) {
+            if (step.maneuver) {
+              // Parse maneuver instruction
+              let instruction = step.maneuver.instruction || 'Continue'
+              
+              // Add emoji based on maneuver type
+              const maneuver = step.maneuver.type
+              let emoji = '🚗'
+              
+              if (maneuver === 'turn' || maneuver === 'merge' || maneuver === 'fork') {
+                const direction = step.maneuver.modifier
+                if (direction === 'left') emoji = '↙️'
+                else if (direction === 'right') emoji = '↗️'
+                else if (direction === 'straight') emoji = '⬆️'
+                else if (direction === 'uturn') emoji = '🔄'
+              } else if (maneuver === 'arrive') {
+                emoji = '🎯'
+              } else if (maneuver === 'depart') {
+                emoji = '🚀'
+              } else if (maneuver === 'roundabout') {
+                emoji = '🔁'
+              }
+              
               steps.push({
-                instruction: step.maneuver.instruction || step.name || 'Continue',
+                instruction: `${emoji} ${instruction}`,
                 distance: formatDistance(step.distance),
                 duration: formatDuration(step.duration)
               })
@@ -115,7 +136,7 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
           </div>
           <div className="text-left">
             <p className="font-bold text-gray-900 text-sm">
-              {isExpanded ? 'Hide Directions' : 'Expand For Directions'}
+              {isExpanded ? 'Hide Turn-by-Turn' : 'View Directions'}
             </p>
             <p className="text-xs text-gray-600">
               {totalDistance} • {totalDuration}
@@ -136,7 +157,7 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
             {directions.map((step, index) => (
               <div
                 key={index}
-                className="flex gap-3 items-start p-3 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl hover:from-blue-100 hover:to-cyan-100 transition-colors"
+                className="flex gap-3 items-start p-3 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl hover:from-blue-100 hover:to-cyan-100 transition-colors border-l-4 border-blue-400"
               >
                 {/* Step number */}
                 <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-md">
@@ -164,7 +185,7 @@ export function DirectionsMap({ destinationAddress }: DirectionsMapProps) {
                 <p className="text-sm font-bold text-gray-900 mb-1">
                   Destination
                 </p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-gray-600 break-words">
                   {destinationAddress}
                 </p>
               </div>
