@@ -23,6 +23,21 @@ export default function FoodCard({ post, onDetailsModalChange }: FoodCardProps) 
     onDetailsModalChange?.(showDetails)
   }, [showDetails, onDetailsModalChange])
 
+  useEffect(() => {
+    if (showDetails) {
+      // Lock body scroll
+      document.body.style.overflow = 'hidden'
+    } else {
+      // Unlock body scroll
+      document.body.style.overflow = 'unset'
+    }
+  
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [showDetails])
+
   const getTrustStars = (score: number) => {
     const stars = []
     const fullStars = Math.floor(score * 5)
