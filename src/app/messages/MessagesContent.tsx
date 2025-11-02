@@ -273,6 +273,27 @@ export default function MessagesContent() {
     loadConversations()
   }, [authUser, conversationId])
 
+  useEffect(() => {
+    if (!selectedConversation?.id || !authUser) return
+  
+    const db = getDb()
+    if (!db) return
+  
+    import('firebase/firestore').then(({ doc, onSnapshot }) => {
+      const conversationRef = doc(db, 'conversations', selectedConversation.id)
+  
+      const unsubscribe = onSnapshot(conversationRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const updatedConvo = snapshot.data() as Conversation
+          // Update the selected conversation with real-time data
+          setSelectedConversation(updatedConvo)
+        }
+      })
+  
+      return () => unsubscribe()
+    })
+  }, [selectedConversation?.id, authUser])
+
   // Load user data
   const loadUserData = async (userIds: string[]) => {
     try {
