@@ -71,6 +71,18 @@ export default function SwipeDeck() {
   }, [])
 
   useEffect(() => {
+    if (showClaimModal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+  
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [showClaimModal])
+
+  useEffect(() => {
     const remainingCards = posts.length - currentIndex
   
     // Load MUCH earlier - when 8-10 cards left (super aggressive buffer)
