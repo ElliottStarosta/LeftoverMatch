@@ -1,174 +1,217 @@
-# LeftoverMatch - Tinder for Food Sharing 🍽️
+# 🍽️ ReSwipe
 
-A modern, responsive food sharing app that connects people with leftover food in their area. Built with Next.js, Firebase, and Tailwind CSS.
+> **Connect Food with People** - Swipe → Claim → Pick up. Find free ready-to-eat food near you using an intelligent matching algorithm.
 
-## Features ✨
+## ✨ Features
 
-- **Tinder-like Swipe Interface**: Swipe through food posts with smooth animations
-- **Smart Algorithm**: Personalized food suggestions based on preferences and location
-- **Real-time Claims**: When someone claims food, it disappears from other users' feeds
-- **User Profiles**: Comprehensive profile setup with dietary preferences and restrictions
-- **Firebase Integration**: Authentication, Firestore, Storage, and real-time updates
-- **Responsive Design**: Works perfectly on all screen sizes without scrolling
-- **Location Services**: GPS-based food discovery and directions
-- **Image Upload**: Easy food photo sharing with Firebase Storage
+### 🎯 Smart Food Matching
+- **Personalized Feed Algorithm**: Matches food posts based on dietary preferences, allergies, cuisines, distance, and poster reputation
+- **Real-time Scoring**: Compatibility percentages and match reasons for every post
+- **Freshness Priority**: Newer posts ranked higher with decay over time
+- **Distance Filtering**: Customizable search radius (1-25 miles)
 
-## Tech Stack 🛠️
+### 🔥 Core Functionality
+- **Swipe Cards**: Tinder-style interface for browsing food posts
+- **Smart Claims**: Lock system prevents race conditions
+- **Direct Messaging**: Real-time chat between poster and claimer
+- **Address Reveal**: Pickup address only shared after claim acceptance
+- **Rating System**: 5-star ratings for both posters and claimers
+- **Trust Score**: Dynamic reputation system with level progression
 
-- **Frontend**: Next.js 16, React 18, TypeScript
-- **Styling**: Tailwind CSS, Framer Motion
-- **Backend**: Firebase (Auth, Firestore, Storage, Functions)
-- **Icons**: Heroicons
-- **State Management**: React Hooks
+### 👥 User Profiles
+- Dietary restrictions & food preferences
+- Allergy management
+- Cooking skill levels
+- Location-based discovery
+- Trust badges and reputation levels
 
-## Getting Started 🚀
+### 🔔 Real-time Notifications
+- Claim confirmations
+- New matches nearby
+- Level-ups and achievements
+- Direct messages
 
-### Prerequisites
+## 🚀 Tech Stack
+
+### Frontend
+- **Next.js 15** - React framework with App Router
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Utility-first styling
+- **Framer Motion** - Smooth animations
+- **GSAP** - Advanced animation library
+- **Heroicons** - Beautiful SVG icons
+
+### Backend & Services
+- **Firebase Firestore** - Real-time database
+- **Firebase Authentication** - Google & email/password auth
+- **Firebase Storage** - Image hosting
+- **OpenStreetMap API** - Geocoding & directions
+- **ImgBB API** - Image upload service
+- **OSRM** - Turn-by-turn routing
+
+### Key Libraries
+- `framer-motion` - Card swipe animations
+- `gsap` - UI animations
+- `next-image` - Optimized images
+- `lucide-react` - Additional icons
+
+## 📋 Prerequisites
 
 - Node.js 18+ 
+- npm or yarn
 - Firebase project
-- Git
+- ImgBB API key
 
-### Installation
+## ⚙️ Environment Setup
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd leftovermatch-nextjs
-   ```
+Create a `.env.local` file:
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+```env
+# Firebase
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 
-3. **Set up Firebase**
-   - Create a new Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
-   - Enable Authentication (Email/Password and Google)
-   - Create a Firestore database
-   - Enable Storage
-   - Get your Firebase configuration
+# Image Upload
+NEXT_PUBLIC_IMGBB_API_KEY=your_imgbb_key
+```
 
-4. **Configure environment variables**
-   ```bash
-   cp env.example .env.local
-   ```
-   
-   Fill in your Firebase configuration in `.env.local`:
-   ```env
-   NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key_here
-   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
-   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
-   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-   NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-   ```
+## 🔧 Installation
 
-5. **Set up Firestore Security Rules**
-   ```javascript
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       // Users can read/write their own data
-       match /users/{userId} {
-         allow read, write: if request.auth != null && request.auth.uid == userId;
-       }
-       
-       // Posts are readable by authenticated users
-       match /posts/{postId} {
-         allow read: if request.auth != null;
-         allow write: if request.auth != null && request.auth.uid == resource.data.userId;
-       }
-       
-       // Claims are readable by involved parties
-       match /claims/{claimId} {
-         allow read, write: if request.auth != null && 
-           (request.auth.uid == resource.data.claimerId || 
-            request.auth.uid == resource.data.posterId);
-       }
-     }
-   }
-   ```
+```bash
+# Clone repository
+git clone https://github.com/yourusername/reswipe.git
+cd reswipe
 
-6. **Set up Storage Rules**
-   ```javascript
-   rules_version = '2';
-   service firebase.storage {
-     match /b/{bucket}/o {
-       match /posts/{userId}/{allPaths=**} {
-         allow read, write: if request.auth != null && request.auth.uid == userId;
-       }
-     }
-   }
-   ```
+# Install dependencies
+npm install
 
-7. **Run the development server**
-   ```bash
-   npm run dev
-   ```
+# Run development server
+npm run dev
 
-8. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
+# Build for production
+npm run build
+npm run start
+```
 
-## Project Structure 📁
+Open [http://localhost:3000](http://localhost:3000) to see the app.
+
+## 📁 Project Structure
 
 ```
 src/
-├── app/                    # Next.js app directory
-│   ├── auth/              # Authentication pages
-│   ├── create/            # Food post creation
-│   ├── profile-setup/     # User profile setup
-│   └── page.tsx           # Main swipe interface
-├── components/            # React components
-│   ├── FoodCard.tsx       # Individual food post card
-│   ├── SwipeDeck.tsx      # Main swipe interface
-│   ├── ClaimModal.tsx     # Claim confirmation modal
-│   └── Navbar.tsx         # Navigation bar
-├── lib/                   # Utility libraries
-│   ├── firebase.ts        # Firebase configuration
-│   ├── algorithm.ts       # Food recommendation algorithm
-│   └── claims.ts          # Claim management
-└── types/                 # TypeScript type definitions
-    └── index.ts           # Main type definitions
+├── app/                          # Next.js app router
+│   ├── page.tsx                 # Home/feed page
+│   ├── auth/                    # Authentication
+│   ├── create/                  # Post creation
+│   ├── messages/                # Messaging
+│   ├── profile/                 # User profiles
+│   └── profile-setup/           # Onboarding
+├── components/                   # Reusable components
+│   ├── SwipeDeck.tsx            # Card swiping interface
+│   ├── FoodCard.tsx             # Individual food card
+│   ├── ClaimModal.tsx           # Claim confirmation
+│   ├── RatingModal.tsx          # Post-claim rating
+│   ├── Navbar.tsx               # Top navigation
+│   └── ...
+├── lib/                          # Utilities & hooks
+│   ├── algorithm.ts             # Personalization engine
+│   ├── claims.ts                # Claim management
+│   ├── firebase-utils.ts        # Firebase initialization
+│   ├── useAuth.ts               # Auth hook
+│   └── ...
+└── types/                        # TypeScript types
+    └── index.ts
 ```
 
-## Key Features Explained 🔍
+## 🧠 Algorithm Overview
 
-### Smart Algorithm
-The app uses a sophisticated algorithm that considers:
-- User location and maximum distance preferences
-- Dietary restrictions and allergies
-- Food preferences and cuisine types
-- Post freshness and trust scores
-- User cooking level and preferences
+### Scoring System (0-100 points)
+1. **Distance** (25 pts) - Proximity to user
+2. **Dietary Compatibility** (20 pts) - Dietary restrictions match
+3. **Allergen Safety** (20 pts) - No allergen conflicts
+4. **Cuisine Preference** (15 pts) - User's favorite cuisines
+5. **Freshness** (10 pts) - How recently posted
+6. **Poster Reputation** (10 pts) - Trust score + ratings
+7. **Time Availability** (5 pts) - Pickup window convenience
+8. **Quality Indicators** (5 pts) - Homemade, refrigerated, quantity
 
-### Real-time Updates
-- When someone claims food, it's immediately removed from other users' feeds
-- Real-time synchronization using Firebase Firestore
-- Automatic post expiration handling
+### Smart Filtering
+- Geo-bounding box for efficient queries
+- Real-time availability checks
+- Allergen conflict detection
+- Dietary restriction validation
 
-### Responsive Design
-- Mobile-first approach
-- No scrolling required on any screen size
-- Touch-friendly swipe gestures
-- Optimized for both mobile and desktop
+## 🎮 How to Use
 
-## Contributing 🤝
+### For Claimers (Food Seekers)
+1. **Sign in** with Google or email
+2. **Set up profile** - Add dietary preferences, allergies, cuisines
+3. **Browse feed** - Swipe left to pass, right to claim
+4. **Claim food** - Send message to poster
+5. **Get address** - Address revealed after poster accepts
+6. **Pick up & rate** - Complete pickup and rate the experience
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### For Posters (Food Sharers)
+1. **Create post** - Add food photo, description, pickup time
+2. **Set location** - Auto-detect or manual entry
+3. **Wait for claims** - Receive notifications when claimed
+4. **Accept claim** - Review claimer, confirm pickup address
+5. **Complete pickup** - Rate the claimer
 
-## License 📄
+## 🌟 User Levels
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+| Level | Requirements | Badge |
+|-------|--------------|-------|
+| 🌱 Rookie Rescuer | Just started | Default |
+| ⭐ Food Hero | 5+ ratings, 3.5★ avg, 5+ posts | Blue star |
+| 👑 Food Legend | 20+ ratings, 4.0★ avg, 20+ posts | Gold crown |
 
-## Support 💬
+## 📊 Database Schema
 
-If you have any questions or need help, please open an issue or contact the development team.
+### Collections
+- **users** - User profiles and preferences
+- **posts** - Food listings
+- **claims** - Claim transactions
+- **messages** - Chat messages
+- **conversations** - Chat threads
+- **ratings** - User ratings
+- **notifications** - Real-time alerts
 
----
+## 🔐 Security Features
 
-**Happy Food Sharing! 🍽️✨**
+- Firebase Authentication (Google OAuth + Email)
+- User trust verification system
+- Reporting & moderation tools
+- Allergen safety checks
+- Real-time data validation
+
+## 🚀 Performance Optimizations
+
+- Lazy loading with React Suspense
+- Image optimization with Next.js Image
+- Efficient Firestore queries with pagination
+- Bounding box geo-filtering
+- Debounced search inputs
+- Local caching of excluded posts
+
+## 🐛 Known Limitations
+
+- Geolocation requires HTTPS in production
+- Daily claim limit: 10 per user
+- Pickup window: 30-minute lock on claim
+- Location auto-detect may require permission grant
+
+## 🔄 Future Features
+
+- [ ] Push notifications
+- [ ] Integration with social media
+- [ ] Food waste gamification
+- [ ] Community challenges
+- [ ] Analytics dashboard
+- [ ] Advanced search filters
+- [ ] Scheduled pickups
+- [ ] Dietary accommodation scores

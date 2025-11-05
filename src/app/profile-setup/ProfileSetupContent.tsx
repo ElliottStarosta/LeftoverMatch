@@ -26,6 +26,13 @@ export default function ProfileSetupPage() {
         notifications: true,
         profileImage: ''
     })
+
+    const FALLBACK_LOCATION = {
+        lat: 45.3026,
+        lng: -75.9070,
+        address: 'Ottawa, ON, Canada'
+    }
+
     const [step, setStep] = useState(1)
     const [saving, setSaving] = useState(false)
     const [mounted, setMounted] = useState(false)
@@ -418,22 +425,35 @@ export default function ProfileSetupPage() {
         }
 
         try {
+            let finalLat = formData.lat
+            let finalLng = formData.lng
 
             const formDataWithLocation = { ...formData }
 
-            if (formDataWithLocation.location && (formDataWithLocation.lat === 0 || formDataWithLocation.lng === 0)) {
+            if ((finalLat === 0 || finalLng === 0) && formData.location) {
                 console.log('📍 Manual address entered, geocoding...')
-                const coords = await geocodeAddress(formDataWithLocation.location)
+                const coords = await geocodeAddress(formData.location)
                 if (coords) {
-                    formDataWithLocation.lat = coords.lat
-                    formDataWithLocation.lng = coords.lng
-                    console.log('✅ Geocoded:', coords)
+                  finalLat = coords.lat
+                  finalLng = coords.lng
+                  console.log('✅ Geocoded:', coords)
                 } else {
-                    setError('Could not find location. Please use the location button or enter a valid address.')
-                    setSaving(false)
-                    return
+                  console.warn('⚠️ Geocoding failed, using fallback coordinates')
+                  finalLat = FALLBACK_LOCATION.lat
+                  finalLng = FALLBACK_LOCATION.lng
                 }
-            }
+              }
+
+              if (finalLat === 0 || finalLng === 0 || !finalLat || !finalLng) {
+                console.warn('⚠️ No coordinates available, using fallback:', FALLBACK_LOCATION)
+                finalLat = FALLBACK_LOCATION.lat
+                finalLng = FALLBACK_LOCATION.lng
+                
+                // Also update the form data for display
+                if (!formData.location || formData.location.trim() === '') {
+                  formData.location = FALLBACK_LOCATION.address
+                }
+              }
 
             const userData: User = {
                 uid: user.uid,
@@ -457,8 +477,8 @@ export default function ProfileSetupPage() {
                 allergies: formData.allergies,
                 cookingLevel: formData.cookingLevel as 'beginner' | 'intermediate' | 'advanced' | 'professional',
                 location: formData.location,
-                lat: formData.lat,
-                lng: formData.lng,
+                lat: finalLat,
+                lng: finalLng,
                 maxDistance: formData.maxDistance,
                 notifications: formData.notifications
             }
