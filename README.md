@@ -2,6 +2,7 @@
 
 > **Connect Food with People** - Swipe → Claim → Pick up. Find free ready-to-eat food near you using an intelligent matching algorithm.
 
+🔗 [Read my Reflection](https://docs.google.com/document/d/1u7GfcnSsI0-oWNcdulXcQLQhvdtJE-arqqp7uREcfQQ/edit?usp=sharing)
 ## ✨ Features
 
 ### 🎯 Smart Food Matching
